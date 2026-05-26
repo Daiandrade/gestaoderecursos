@@ -1,0 +1,12 @@
+{
+  "name": "tr-gestao-recursos-service",
+  "version": "1.0.0",
+  "description": "Instalador de Serviço Windows para o Sistema TR",
+  "scripts": {
+    "install-service": "node install-service.js",
+    "uninstall-service": "node uninstall-service.js"
+  },
+  "dependencies": {
+    "node-windows": "^1.0.0-beta.8"
+  }
+}

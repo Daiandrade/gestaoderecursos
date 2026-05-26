@@ -1,0 +1,12 @@
+{
+  "name": "setup-appwrite",
+  "version": "1.0.0",
+  "description": "Script de setup automático do Appwrite para o sistema de Gestão de Recursos",
+  "scripts": {
+    "setup": "node setup.js"
+  },
+  "dependencies": {
+    "node-appwrite": "^14.0.0",
+    "dotenv": "^16.3.1"
+  }
+}
