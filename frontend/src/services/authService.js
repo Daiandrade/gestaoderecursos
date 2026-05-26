@@ -1,4 +1,4 @@
-import { account, databases, DATABASE_ID, COLLECTIONS, ID, Query } from './appwrite';
+import { account, databases, DATABASE_ID, COLLECTIONS, Query } from './appwrite';
 
 export const authService = {
   // Login com email e senha
