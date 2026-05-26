@@ -15,12 +15,19 @@ export const usersService = {
     const productsMap = {};
     productsRes.documents.forEach(p => { productsMap[p.$id] = p.name; });
 
-    return profilesRes.documents.map(p => ({
-      id: p.$id,
-      ...p,
-      product_name: productsMap[p.product_id] || null,
-      created_at: p.$createdAt
-    }));
+    return profilesRes.documents.map(p => {
+      // Suportar múltiplos produtos separados por vírgula
+      const productIds = p.product_id ? p.product_id.split(',').filter(id => id.trim()) : [];
+      const productNames = productIds.map(id => productsMap[id]).filter(Boolean);
+
+      return {
+        id: p.$id,
+        ...p,
+        product_names: productNames,
+        product_name: productNames.join(', ') || null, // Retrocompatibilidade
+        created_at: p.$createdAt
+      };
+    });
   },
 
   // Cria perfil (precisa que a conta Auth já exista — criada via painel Appwrite ou auto-cadastro)

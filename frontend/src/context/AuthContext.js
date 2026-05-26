@@ -25,7 +25,14 @@ export const AuthProvider = ({ children }) => {
       const result = await authService.getCurrentUser();
       if (result) {
         setUser(result.user);
-        setProfile(result.profile);
+        // Converter product_id string para array product_ids
+        const profileWithArray = {
+          ...result.profile,
+          product_ids: result.profile.product_id
+            ? result.profile.product_id.split(',').filter(id => id.trim())
+            : []
+        };
+        setProfile(profileWithArray);
       }
     } catch (error) {
       console.error('Erro ao carregar usuário:', error);
@@ -37,7 +44,14 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const result = await authService.login(email, password);
     setUser(result.user);
-    setProfile(result.profile);
+    // Converter product_id string para array product_ids
+    const profileWithArray = {
+      ...result.profile,
+      product_ids: result.profile.product_id
+        ? result.profile.product_id.split(',').filter(id => id.trim())
+        : []
+    };
+    setProfile(profileWithArray);
     return result;
   };
 
@@ -52,7 +66,7 @@ export const AuthProvider = ({ children }) => {
   const canAccessProduct = (productId) => {
     if (!profile) return false;
     if (profile.role === 'admin') return true;
-    return profile.product_id === productId;
+    return profile.product_ids?.includes(productId) || false;
   };
 
   const value = {

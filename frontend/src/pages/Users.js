@@ -13,7 +13,7 @@ function Users() {
     username: '',
     email: '',
     role: 'product_manager',
-    product_id: ''
+    product_ids: []
   });
 
   useEffect(() => {
@@ -39,10 +39,17 @@ function Users() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Converter array de product_ids para string separada por vírgula
+      const dataToSave = {
+        ...formData,
+        product_id: formData.product_ids.join(',')
+      };
+      delete dataToSave.product_ids;
+
       if (editingUser) {
-        await usersService.updateProfile(editingUser.id, formData);
+        await usersService.updateProfile(editingUser.id, dataToSave);
       } else {
-        await usersService.createProfile(formData);
+        await usersService.createProfile(dataToSave);
       }
       setShowModal(false);
       setEditingUser(null);
@@ -60,7 +67,7 @@ function Users() {
       username: user.username,
       email: user.email,
       role: user.role,
-      product_id: user.product_id || ''
+      product_ids: user.product_id ? user.product_id.split(',').filter(id => id.trim()) : []
     });
     setShowModal(true);
   };
@@ -87,7 +94,7 @@ function Users() {
       username: '',
       email: '',
       role: 'product_manager',
-      product_id: ''
+      product_ids: []
     });
   };
 
@@ -199,8 +206,12 @@ function Users() {
                       </span>
                     </td>
                     <td>
-                      {user.product_name ? (
-                        <span className="badge badge-orange">{user.product_name}</span>
+                      {user.product_names && user.product_names.length > 0 ? (
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {user.product_names.map((name, idx) => (
+                            <span key={idx} className="badge badge-orange">{name}</span>
+                          ))}
+                        </div>
                       ) : (
                         <span className="text-muted">Todos</span>
                       )}
@@ -289,17 +300,47 @@ function Users() {
 
                     {formData.role === 'product_manager' && (
                       <div>
-                        <label>Produto Responsável *</label>
-                        <select
-                          value={formData.product_id}
-                          onChange={(e) => setFormData({ ...formData, product_id: e.target.value })}
-                          required
-                        >
-                          <option value="">Selecione...</option>
+                        <label>Produtos Responsável * (selecione um ou mais)</label>
+                        <div style={{
+                          border: '1px solid #ddd',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          backgroundColor: '#f9f9f9'
+                        }}>
                           {products.map(p => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
+                            <label
+                              key={p.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '8px',
+                                cursor: 'pointer',
+                                borderRadius: '4px',
+                                transition: 'background 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={formData.product_ids.includes(p.id)}
+                                onChange={(e) => {
+                                  const newIds = e.target.checked
+                                    ? [...formData.product_ids, p.id]
+                                    : formData.product_ids.filter(id => id !== p.id);
+                                  setFormData({ ...formData, product_ids: newIds });
+                                }}
+                                style={{ marginRight: '8px' }}
+                              />
+                              {p.name}
+                            </label>
                           ))}
-                        </select>
+                        </div>
+                        <div className="form-hint">
+                          Selecione todos os produtos que este gerente poderá acessar
+                        </div>
                       </div>
                     )}
                   </div>
