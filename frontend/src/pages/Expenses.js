@@ -54,17 +54,27 @@ function Expenses() {
 
   const loadInitial = async () => {
     try {
-      const filter = profile?.role === 'admin' ? null : profile?.product_id;
-      const [productsData, resourcesData] = await Promise.all([
-        productsService.getAll(filter),
-        resourcesService.getAll(filter)
+      const [allProducts, allResources] = await Promise.all([
+        productsService.getAll(),
+        resourcesService.getAll()
       ]);
 
-      setProducts(productsData);
-      setResources(resourcesData);
+      // Filtrar se não for admin
+      let filteredProducts, filteredResources;
+      if (profile?.role === 'admin') {
+        filteredProducts = allProducts;
+        filteredResources = allResources;
+      } else {
+        const allowedProductIds = profile?.product_ids || [];
+        filteredProducts = allProducts.filter(p => allowedProductIds.includes(p.id));
+        filteredResources = allResources.filter(r => allowedProductIds.includes(r.product_id));
+      }
 
-      if (productsData.length > 0) {
-        setSelectedProduct(productsData[0].id);
+      setProducts(filteredProducts);
+      setResources(filteredResources);
+
+      if (filteredProducts.length > 0) {
+        setSelectedProduct(filteredProducts[0].id);
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);

@@ -19,9 +19,16 @@ function Products() {
 
   const loadProducts = async () => {
     try {
-      const filter = profile?.role === 'admin' ? null : profile?.product_id;
-      const data = await productsService.getAll(filter);
-      setProducts(data);
+      const allData = await productsService.getAll();
+
+      // Filtrar se não for admin
+      if (profile?.role === 'admin') {
+        setProducts(allData);
+      } else {
+        const allowedProductIds = profile?.product_ids || [];
+        const filteredData = allData.filter(p => allowedProductIds.includes(p.id));
+        setProducts(filteredData);
+      }
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
       alert('Erro ao carregar produtos');

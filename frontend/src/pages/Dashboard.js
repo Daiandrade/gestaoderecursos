@@ -31,14 +31,23 @@ function Dashboard() {
 
   const loadData = async () => {
     try {
-      const productFilter = profile?.role === 'admin' ? null : profile?.product_id;
-      const [productsData, resourcesData] = await Promise.all([
-        productsService.getAll(productFilter),
-        resourcesService.getAll(productFilter)
+      // Buscar todos os produtos e recursos
+      const [allProducts, allResources] = await Promise.all([
+        productsService.getAll(),
+        resourcesService.getAll()
       ]);
 
-      setProducts(productsData);
-      setResources(resourcesData);
+      // Filtrar se não for admin
+      if (profile?.role === 'admin') {
+        setProducts(allProducts);
+        setResources(allResources);
+      } else {
+        const allowedProductIds = profile?.product_ids || [];
+        const filteredProducts = allProducts.filter(p => allowedProductIds.includes(p.id));
+        const filteredResources = allResources.filter(r => allowedProductIds.includes(r.product_id));
+        setProducts(filteredProducts);
+        setResources(filteredResources);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
     } finally {

@@ -34,13 +34,22 @@ function Resources() {
 
   const loadData = async () => {
     try {
-      const filter = profile?.role === 'admin' ? null : profile?.product_id;
-      const [resourcesData, productsData] = await Promise.all([
-        resourcesService.getAll(filter),
-        productsService.getAll(filter)
+      const [allResources, allProducts] = await Promise.all([
+        resourcesService.getAll(),
+        productsService.getAll()
       ]);
-      setResources(resourcesData);
-      setProducts(productsData);
+
+      // Filtrar se não for admin
+      if (profile?.role === 'admin') {
+        setResources(allResources);
+        setProducts(allProducts);
+      } else {
+        const allowedProductIds = profile?.product_ids || [];
+        const filteredResources = allResources.filter(r => allowedProductIds.includes(r.product_id));
+        const filteredProducts = allProducts.filter(p => allowedProductIds.includes(p.id));
+        setResources(filteredResources);
+        setProducts(filteredProducts);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       alert('Erro ao carregar dados');
