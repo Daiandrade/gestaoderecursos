@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { expensesService } from '../services/expensesService';
 import { productsService } from '../services/productsService';
 import { resourcesService } from '../services/resourcesService';
+import { exportPDF, exportExcel } from '../utils/reportExport';
 import { CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 
 function Expenses() {
@@ -189,6 +190,42 @@ function Expenses() {
 
   const currentProductName = products.find(p => p.id === selectedProduct)?.name || '';
 
+  const buildReportSections = () => ({
+    title: 'Conta Corrente - Despesas',
+    subtitle: `Produto: ${currentProductName} · Ano: ${selectedYear}`,
+    sections: [
+      {
+        heading: 'Lançamentos',
+        columns: ['Recurso', 'Período', 'Valor', 'Descrição', 'Registrado por'],
+        rows: expenses.map(e => [
+          e.resource_name,
+          `${months[e.month - 1]}/${e.year}`,
+          formatCurrency(parseFloat(e.amount)),
+          e.description || '-',
+          e.created_by_name || '-'
+        ])
+      },
+      {
+        heading: 'Resumo Mensal',
+        columns: ['Mês', 'Valor'],
+        rows: monthlyData.map(m => [m.month, formatCurrency(m.valor)])
+      }
+    ]
+  });
+
+  const handleExportPDF = () => {
+    const { title, subtitle, sections } = buildReportSections();
+    exportPDF({ title, subtitle, sections, filename: `despesas-${currentProductName}-${selectedYear}` });
+  };
+
+  const handleExportExcel = () => {
+    const { sections } = buildReportSections();
+    exportExcel({
+      filename: `despesas-${currentProductName}-${selectedYear}`,
+      sheets: sections.map(s => ({ name: s.heading, columns: s.columns, rows: s.rows }))
+    });
+  };
+
   return (
     <div className="main-content">
       <div className="container">
@@ -197,9 +234,17 @@ function Expenses() {
             <h1>Conta Corrente</h1>
             <p className="page-subtitle">Controle financeiro de despesas mensais por produto</p>
           </div>
-          <button onClick={handleAdd} className="btn-primary" disabled={!selectedProduct}>
-            + Nova Despesa
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={handleExportPDF} className="btn-secondary" disabled={!selectedProduct}>
+              Exportar PDF
+            </button>
+            <button onClick={handleExportExcel} className="btn-secondary" disabled={!selectedProduct}>
+              Exportar Excel
+            </button>
+            <button onClick={handleAdd} className="btn-primary" disabled={!selectedProduct}>
+              + Nova Despesa
+            </button>
+          </div>
         </div>
 
         <div className="filter-bar">

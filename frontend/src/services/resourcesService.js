@@ -26,6 +26,7 @@ export const resourcesService = {
         ...r,
         product_name: productsMap[r.product_id] || 'Desconhecido',
         total_expenses: totalExpenses,
+        actual_value: totalExpenses, // valor real = soma das despesas
         expense_count: resourceExpenses.length
       };
     });
@@ -47,7 +48,10 @@ export const resourcesService = {
         job_title: data.job_title,
         job_description: data.job_description || '',
         allocation_percentage: parseInt(data.allocation_percentage) || 100,
-        status: data.status || 'active'
+        status: data.status || 'ativo',
+        start_date: data.start_date || null,
+        end_date: data.end_date || null,
+        planned_value: parseFloat(data.planned_value) || 0
       }
     );
     return { id: doc.$id, ...doc };
@@ -63,7 +67,10 @@ export const resourcesService = {
         job_title: data.job_title,
         job_description: data.job_description || '',
         allocation_percentage: parseInt(data.allocation_percentage) || 100,
-        status: data.status
+        status: data.status,
+        start_date: data.start_date || null,
+        end_date: data.end_date || null,
+        planned_value: parseFloat(data.planned_value) || 0
       }
     );
     return { id: doc.$id, ...doc };

@@ -53,7 +53,9 @@ class Product {
         SELECT
           p.*,
           COUNT(DISTINCT r.id) as total_resources,
-          COUNT(DISTINCT CASE WHEN r.status = 'active' THEN r.id END) as active_resources,
+          COUNT(DISTINCT CASE WHEN r.status = 'ativo' THEN r.id END) as active_resources,
+          COUNT(DISTINCT CASE WHEN r.status = 'urgente' THEN r.id END) as urgent_resources,
+          COUNT(DISTINCT CASE WHEN r.status = 'inativo' THEN r.id END) as inactive_resources,
           COALESCE(SUM(e.amount), 0) as total_expenses
         FROM products p
         LEFT JOIN resources r ON p.id = r.product_id

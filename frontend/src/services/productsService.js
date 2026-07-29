@@ -30,7 +30,9 @@ export const productsService = {
         id: p.$id,
         ...p,
         total_resources: productResources.length,
-        active_resources: productResources.filter(r => r.status === 'active').length,
+        active_resources: productResources.filter(r => r.status === 'ativo').length,
+        urgent_resources: productResources.filter(r => r.status === 'urgente').length,
+        inactive_resources: productResources.filter(r => r.status === 'inativo').length,
         total_expenses: totalExpenses
       };
     });

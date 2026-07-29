@@ -8,9 +8,12 @@ Sistema completo para organização e gerenciamento de recursos de produtos, com
 - ✅ Gerenciamento de 4 produtos: Tax One, Tax One For SAP, Integrações-OBI e DF-e
 - ✅ Cadastro de recursos (pessoas/profissionais) por produto
 - ✅ Jobs Description com cargo e descrição de função
+- ✅ **Status de recursos**: Ativo, Urgente, Inativo
+- ✅ **Período de alocação**: Datas de início e término
+- ✅ **Gestão financeira**: Valor planejado vs. Valor real (despesas)
 - ✅ Conta corrente para registro de despesas mensais
 - ✅ Histórico de alterações de valores
-- ✅ Gráficos e relatórios de gastos
+- ✅ Gráficos e relatórios de gastos por status
 - ✅ Sistema de autenticação com JWT
 - ✅ Controle de acesso por produto (Admin vs Product Manager)
 
@@ -62,6 +65,19 @@ Isso criará o banco de dados SQLite com:
 - Tabelas necessárias
 - 4 produtos pré-cadastrados
 - Usuário admin padrão
+
+**IMPORTANTE**: Se você já tem um banco de dados existente e está atualizando o sistema, execute a migração:
+
+```bash
+# Na raiz do projeto
+node migrate-database.js
+```
+
+Esta migração adiciona:
+- Novos status para recursos: ativo, urgente, inativo
+- Campos de período de alocação: start_date, end_date
+- Campo de valor planejado: planned_value
+- O valor real é calculado automaticamente das despesas
 
 3. **Iniciar a aplicação**
 
@@ -173,8 +189,11 @@ Senha: admin123
 ### 3. Gerenciar Recursos
 - Acesse "Recursos" no menu
 - Cadastre recursos (pessoas) com cargo e descrição
+- Defina período de alocação (início e término)
 - Defina alocação percentual
-- Marque status (ativo/inativo)
+- Configure status: **Ativo** (operação normal), **Urgente** (requer atenção) ou **Inativo** (fora de operação)
+- Defina valor planejado para o recurso
+- O valor real é calculado automaticamente das despesas lançadas
 
 ### 4. Registrar Despesas
 - Acesse "Despesas" no menu

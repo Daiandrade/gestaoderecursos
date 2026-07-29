@@ -21,7 +21,10 @@ function Resources() {
     job_title: '',
     job_description: '',
     allocation_percentage: 100,
-    status: 'active'
+    status: 'ativo',
+    start_date: '',
+    end_date: '',
+    planned_value: 0
   });
 
   useEffect(() => {
@@ -83,7 +86,10 @@ function Resources() {
       job_title: resource.job_title,
       job_description: resource.job_description || '',
       allocation_percentage: resource.allocation_percentage,
-      status: resource.status
+      status: resource.status,
+      start_date: resource.start_date || '',
+      end_date: resource.end_date || '',
+      planned_value: resource.planned_value || 0
     });
     setShowModal(true);
   };
@@ -117,7 +123,10 @@ function Resources() {
       job_title: '',
       job_description: '',
       allocation_percentage: 100,
-      status: 'active'
+      status: 'ativo',
+      start_date: '',
+      end_date: '',
+      planned_value: 0
     });
   };
 
@@ -172,8 +181,9 @@ function Resources() {
             <label>Status</label>
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
               <option value="">Todos</option>
-              <option value="active">Ativos</option>
-              <option value="inactive">Inativos</option>
+              <option value="ativo">Ativo</option>
+              <option value="urgente">Urgente</option>
+              <option value="inativo">Inativo</option>
             </select>
           </div>
         </div>
@@ -186,47 +196,70 @@ function Resources() {
                   <th>Nome</th>
                   <th>Produto</th>
                   <th>Cargo</th>
+                  <th>Período</th>
                   <th>Alocação</th>
                   <th>Status</th>
-                  <th>Despesas Totais</th>
+                  <th>Valor Planejado</th>
+                  <th>Valor Real</th>
                   <th style={{ width: '220px' }}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredResources.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center text-muted" style={{ padding: '40px' }}>
+                    <td colSpan="9" className="text-center text-muted" style={{ padding: '40px' }}>
                       Nenhum recurso encontrado
                     </td>
                   </tr>
                 ) : (
-                  filteredResources.map(resource => (
-                    <tr key={resource.id}>
-                      <td><strong>{resource.name}</strong></td>
-                      <td><span className="badge badge-orange">{resource.product_name}</span></td>
-                      <td>{resource.job_title}</td>
-                      <td><strong>{resource.allocation_percentage}%</strong></td>
-                      <td>
-                        <span className={`badge ${resource.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
-                          {resource.status === 'active' ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </td>
-                      <td className="font-semibold">
-                        {formatCurrency(parseFloat(resource.total_expenses || 0))}
-                      </td>
-                      <td className="actions">
-                        <button onClick={() => handleViewDetails(resource)} className="btn-ghost btn-small">
-                          Detalhes
-                        </button>
-                        <button onClick={() => handleEdit(resource)} className="btn-secondary btn-small">
-                          Editar
-                        </button>
-                        <button onClick={() => handleDelete(resource.id, resource.name)} className="btn-danger btn-small">
-                          Excluir
-                        </button>
-                      </td>
-                    </tr>
-                  ))
+                  filteredResources.map(resource => {
+                    const getStatusBadge = (status) => {
+                      const statusMap = {
+                        'ativo': { class: 'badge-success', label: 'Ativo' },
+                        'urgente': { class: 'badge-warning', label: 'Urgente' },
+                        'inativo': { class: 'badge-secondary', label: 'Inativo' }
+                      };
+                      const s = statusMap[status] || { class: 'badge-secondary', label: status };
+                      return <span className={`badge ${s.class}`}>{s.label}</span>;
+                    };
+
+                    const formatDate = (date) => {
+                      if (!date) return '-';
+                      return new Date(date).toLocaleDateString('pt-BR');
+                    };
+
+                    const period = resource.start_date || resource.end_date
+                      ? `${formatDate(resource.start_date)} até ${formatDate(resource.end_date)}`
+                      : '-';
+
+                    return (
+                      <tr key={resource.id}>
+                        <td><strong>{resource.name}</strong></td>
+                        <td><span className="badge badge-orange">{resource.product_name}</span></td>
+                        <td>{resource.job_title}</td>
+                        <td className="text-muted" style={{ fontSize: '13px' }}>{period}</td>
+                        <td><strong>{resource.allocation_percentage}%</strong></td>
+                        <td>{getStatusBadge(resource.status)}</td>
+                        <td className="font-semibold">
+                          {formatCurrency(parseFloat(resource.planned_value || 0))}
+                        </td>
+                        <td className="font-semibold">
+                          {formatCurrency(parseFloat(resource.actual_value || 0))}
+                        </td>
+                        <td className="actions">
+                          <button onClick={() => handleViewDetails(resource)} className="btn-ghost btn-small">
+                            Detalhes
+                          </button>
+                          <button onClick={() => handleEdit(resource)} className="btn-secondary btn-small">
+                            Editar
+                          </button>
+                          <button onClick={() => handleDelete(resource.id, resource.name)} className="btn-danger btn-small">
+                            Excluir
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -298,6 +331,26 @@ function Resources() {
 
                   <div className="form-row">
                     <div>
+                      <label>Data Início</label>
+                      <input
+                        type="date"
+                        value={formData.start_date}
+                        onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label>Data Término</label>
+                      <input
+                        type="date"
+                        value={formData.end_date}
+                        onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div>
                       <label>Alocação no Produto (%) *</label>
                       <input
                         type="number"
@@ -316,9 +369,25 @@ function Resources() {
                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                         required
                       >
-                        <option value="active">Ativo</option>
-                        <option value="inactive">Inativo</option>
+                        <option value="ativo">Ativo</option>
+                        <option value="urgente">Urgente</option>
+                        <option value="inativo">Inativo</option>
                       </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label>Valor Planejado (R$)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.planned_value}
+                      onChange={(e) => setFormData({ ...formData, planned_value: parseFloat(e.target.value) || 0 })}
+                      placeholder="0.00"
+                    />
+                    <div className="form-hint">
+                      Valor estimado/planejado para este recurso. O valor real será calculado automaticamente das despesas.
                     </div>
                   </div>
                 </div>
@@ -352,12 +421,55 @@ function Resources() {
                   <div>
                     <h2 style={{ marginBottom: '4px' }}>{selectedResource.name}</h2>
                     <div style={{ color: 'var(--tr-medium-gray)', fontSize: '15px' }}>{selectedResource.job_title}</div>
-                    <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                    <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <span className="badge badge-orange">{selectedResource.product_name}</span>
-                      <span className={`badge ${selectedResource.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
-                        {selectedResource.status === 'active' ? 'Ativo' : 'Inativo'}
+                      <span className={`badge ${
+                        selectedResource.status === 'ativo' ? 'badge-success' :
+                        selectedResource.status === 'urgente' ? 'badge-warning' : 'badge-secondary'
+                      }`}>
+                        {selectedResource.status === 'ativo' ? 'Ativo' :
+                         selectedResource.status === 'urgente' ? 'Urgente' : 'Inativo'}
                       </span>
                       <span className="badge badge-info">{selectedResource.allocation_percentage}% alocado</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                  <div>
+                    <label style={{ textTransform: 'uppercase', fontSize: '12px', letterSpacing: '0.5px', color: 'var(--tr-medium-gray)', marginBottom: '8px', display: 'block' }}>
+                      Período de Alocação
+                    </label>
+                    <div style={{ fontSize: '15px' }}>
+                      {selectedResource.start_date || selectedResource.end_date ? (
+                        <>
+                          <strong>Início:</strong> {selectedResource.start_date ? new Date(selectedResource.start_date).toLocaleDateString('pt-BR') : 'Não definido'}
+                          <br />
+                          <strong>Término:</strong> {selectedResource.end_date ? new Date(selectedResource.end_date).toLocaleDateString('pt-BR') : 'Não definido'}
+                        </>
+                      ) : (
+                        <em style={{ color: 'var(--tr-medium-gray)' }}>Período não definido</em>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ textTransform: 'uppercase', fontSize: '12px', letterSpacing: '0.5px', color: 'var(--tr-medium-gray)', marginBottom: '8px', display: 'block' }}>
+                      Valores
+                    </label>
+                    <div style={{ fontSize: '15px' }}>
+                      <strong>Planejado:</strong> {formatCurrency(parseFloat(selectedResource.planned_value || 0))}
+                      <br />
+                      <strong>Real (Despesas):</strong> {formatCurrency(parseFloat(selectedResource.actual_value || 0))}
+                      <br />
+                      {selectedResource.planned_value > 0 && (
+                        <span style={{
+                          color: selectedResource.actual_value > selectedResource.planned_value ? '#dc3545' : '#28a745',
+                          fontWeight: 600
+                        }}>
+                          {((selectedResource.actual_value / selectedResource.planned_value) * 100).toFixed(1)}% do planejado
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

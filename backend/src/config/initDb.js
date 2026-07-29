@@ -37,7 +37,10 @@ const initDatabase = () => {
           job_title TEXT NOT NULL,
           job_description TEXT,
           allocation_percentage INTEGER DEFAULT 100,
-          status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
+          status TEXT DEFAULT 'ativo' CHECK(status IN ('ativo', 'urgente', 'inativo')),
+          start_date DATE,
+          end_date DATE,
+          planned_value DECIMAL(10, 2) DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (product_id) REFERENCES products(id)

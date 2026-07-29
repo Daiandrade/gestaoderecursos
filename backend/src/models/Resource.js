@@ -3,12 +3,20 @@ const db = require('../config/database');
 class Resource {
   static create(resourceData) {
     return new Promise((resolve, reject) => {
-      const { name, product_id, job_title, job_description, allocation_percentage } = resourceData;
+      const {
+        name, product_id, job_title, job_description,
+        allocation_percentage, status, start_date, end_date, planned_value
+      } = resourceData;
 
       db.run(
-        `INSERT INTO resources (name, product_id, job_title, job_description, allocation_percentage)
-         VALUES (?, ?, ?, ?, ?)`,
-        [name, product_id, job_title, job_description, allocation_percentage || 100],
+        `INSERT INTO resources (
+          name, product_id, job_title, job_description, allocation_percentage,
+          status, start_date, end_date, planned_value
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          name, product_id, job_title, job_description, allocation_percentage || 100,
+          status || 'ativo', start_date || null, end_date || null, planned_value || 0
+        ],
         function(err) {
           if (err) reject(err);
           else resolve({ id: this.lastID, ...resourceData });
@@ -67,14 +75,21 @@ class Resource {
 
   static update(id, resourceData) {
     return new Promise((resolve, reject) => {
-      const { name, job_title, job_description, allocation_percentage, status } = resourceData;
+      const {
+        name, job_title, job_description, allocation_percentage,
+        status, start_date, end_date, planned_value
+      } = resourceData;
 
       db.run(
         `UPDATE resources
          SET name = ?, job_title = ?, job_description = ?, allocation_percentage = ?,
-             status = ?, updated_at = CURRENT_TIMESTAMP
+             status = ?, start_date = ?, end_date = ?, planned_value = ?,
+             updated_at = CURRENT_TIMESTAMP
          WHERE id = ?`,
-        [name, job_title, job_description, allocation_percentage, status, id],
+        [
+          name, job_title, job_description, allocation_percentage,
+          status, start_date, end_date, planned_value, id
+        ],
         function(err) {
           if (err) reject(err);
           else resolve({ id, updated: this.changes > 0 });
@@ -144,6 +159,7 @@ class Resource {
           r.*,
           p.name as product_name,
           COALESCE(SUM(e.amount), 0) as total_expenses,
+          COALESCE(SUM(e.amount), 0) as actual_value,
           COUNT(e.id) as expense_count
         FROM resources r
         JOIN products p ON r.product_id = p.id

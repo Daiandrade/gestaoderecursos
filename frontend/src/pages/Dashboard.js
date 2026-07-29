@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { productsService } from '../services/productsService';
 import { resourcesService } from '../services/resourcesService';
+import { exportPDF, exportExcel } from '../utils/reportExport';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
@@ -60,8 +61,12 @@ function Dashboard() {
   }
 
   const totalProducts = products.length;
-  const totalResources = resources.filter(r => r.status === 'active').length;
+  const resourcesAtivos = resources.filter(r => r.status === 'ativo').length;
+  const resourcesUrgentes = resources.filter(r => r.status === 'urgente').length;
+  const resourcesInativos = resources.filter(r => r.status === 'inativo').length;
+  const totalResources = resourcesAtivos + resourcesUrgentes + resourcesInativos;
   const totalExpenses = resources.reduce((sum, r) => sum + parseFloat(r.total_expenses || 0), 0);
+  const totalPlanned = resources.reduce((sum, r) => sum + parseFloat(r.planned_value || 0), 0);
   const avgExpensePerResource = totalResources > 0 ? totalExpenses / totalResources : 0;
 
   const productData = products.map(p => ({
@@ -78,6 +83,53 @@ function Dashboard() {
   const formatCurrency = (value) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+  const buildReportSections = () => ({
+    title: 'Dashboard Gerencial',
+    subtitle: isAdmin()
+      ? 'Visão consolidada de todos os produtos e recursos'
+      : `Gerenciando: ${products[0]?.name || 'Nenhum produto atribuído'}`,
+    sections: [
+      {
+        heading: 'Resumo Geral',
+        columns: ['Indicador', 'Valor'],
+        rows: [
+          ['Produtos', String(totalProducts)],
+          ['Recursos Ativos', String(resourcesAtivos)],
+          ['Recursos Urgentes', String(resourcesUrgentes)],
+          ['Recursos Inativos', String(resourcesInativos)],
+          ['Valor Planejado', formatCurrency(totalPlanned)],
+          ['Valor Real (Despesas)', formatCurrency(totalExpenses)],
+          ['Variação', totalPlanned > 0 ? `${((totalExpenses / totalPlanned) * 100).toFixed(1)}%` : '-'],
+          ['Custo Médio por Recurso', formatCurrency(avgExpensePerResource)]
+        ]
+      },
+      {
+        heading: 'Visão Geral dos Produtos',
+        columns: ['Produto', 'Descrição', 'Recursos Ativos', 'Total Recursos', 'Despesas Totais'],
+        rows: products.map(p => [
+          p.name,
+          p.description || '-',
+          String(p.active_resources || 0),
+          String(p.total_resources || 0),
+          formatCurrency(parseFloat(p.total_expenses || 0))
+        ])
+      }
+    ]
+  });
+
+  const handleExportPDF = () => {
+    const { title, subtitle, sections } = buildReportSections();
+    exportPDF({ title, subtitle, sections, filename: 'dashboard-gerencial' });
+  };
+
+  const handleExportExcel = () => {
+    const { sections } = buildReportSections();
+    exportExcel({
+      filename: 'dashboard-gerencial',
+      sheets: sections.map(s => ({ name: s.heading, columns: s.columns, rows: s.rows }))
+    });
+  };
+
   return (
     <div className="main-content">
       <div className="container">
@@ -89,6 +141,10 @@ function Dashboard() {
                 ? 'Visão consolidada de todos os produtos e recursos'
                 : `Gerenciando: ${products[0]?.name || 'Nenhum produto atribuído'}`}
             </p>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={handleExportPDF} className="btn-secondary">Exportar PDF</button>
+            <button onClick={handleExportExcel} className="btn-secondary">Exportar Excel</button>
           </div>
         </div>
 
@@ -108,17 +164,52 @@ function Dashboard() {
             <div className="stat-card-header">
               <div>
                 <div className="stat-label">Recursos Ativos</div>
-                <div className="stat-value">{totalResources}</div>
-                <div className="stat-change positive">Profissionais alocados</div>
+                <div className="stat-value">{resourcesAtivos}</div>
+                <div className="stat-change positive">Operando normalmente</div>
               </div>
-              <div className="stat-icon success">👥</div>
+              <div className="stat-icon success">✓</div>
+            </div>
+          </div>
+
+          <div className="stat-card warning">
+            <div className="stat-card-header">
+              <div>
+                <div className="stat-label">Recursos Urgentes</div>
+                <div className="stat-value">{resourcesUrgentes}</div>
+                <div className="stat-change">Requerem atenção</div>
+              </div>
+              <div className="stat-icon warning">⚠</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-card-header">
+              <div>
+                <div className="stat-label">Recursos Inativos</div>
+                <div className="stat-value">{resourcesInativos}</div>
+                <div className="stat-change">Fora de operação</div>
+              </div>
+              <div className="stat-icon">⏸</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-grid" style={{ marginTop: '20px' }}>
+          <div className="stat-card info">
+            <div className="stat-card-header">
+              <div>
+                <div className="stat-label">Valor Planejado</div>
+                <div className="stat-value">{formatCurrency(totalPlanned)}</div>
+                <div className="stat-change">Total estimado</div>
+              </div>
+              <div className="stat-icon info">📋</div>
             </div>
           </div>
 
           <div className="stat-card info">
             <div className="stat-card-header">
               <div>
-                <div className="stat-label">Despesas Totais</div>
+                <div className="stat-label">Valor Real (Despesas)</div>
                 <div className="stat-value">{formatCurrency(totalExpenses)}</div>
                 <div className="stat-change">Acumulado</div>
               </div>
@@ -126,14 +217,82 @@ function Dashboard() {
             </div>
           </div>
 
-          <div className="stat-card warning">
+          <div className="stat-card">
+            <div className="stat-card-header">
+              <div>
+                <div className="stat-label">Variação</div>
+                <div className="stat-value" style={{
+                  color: totalExpenses > totalPlanned ? '#dc3545' : '#28a745',
+                  fontSize: totalPlanned > 0 ? '1.5rem' : '2rem'
+                }}>
+                  {totalPlanned > 0
+                    ? `${((totalExpenses / totalPlanned) * 100).toFixed(1)}%`
+                    : '-'}
+                </div>
+                <div className="stat-change">
+                  {totalPlanned > 0 && totalExpenses > totalPlanned && 'Acima do planejado'}
+                  {totalPlanned > 0 && totalExpenses <= totalPlanned && 'Dentro do planejado'}
+                  {totalPlanned === 0 && 'Sem planejamento'}
+                </div>
+              </div>
+              <div className="stat-icon">📊</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
             <div className="stat-card-header">
               <div>
                 <div className="stat-label">Custo Médio</div>
                 <div className="stat-value">{formatCurrency(avgExpensePerResource)}</div>
                 <div className="stat-change">Por recurso</div>
               </div>
-              <div className="stat-icon warning">📈</div>
+              <div className="stat-icon">📈</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ marginTop: '20px' }}>
+          <div className="card-header">
+            <span>Recursos por Status</span>
+            <span className="card-subtitle">Distribuição atual dos {totalResources} recursos</span>
+          </div>
+          <div style={{ padding: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+              <div className="card" style={{ background: 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)', border: '1px solid #c3e6cb' }}>
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', fontWeight: 700, color: '#155724', marginBottom: '8px' }}>
+                    {resourcesAtivos}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#155724', fontWeight: 600 }}>RECURSOS ATIVOS</div>
+                  <div style={{ fontSize: '12px', color: '#155724', marginTop: '4px' }}>
+                    {totalResources > 0 ? `${((resourcesAtivos / totalResources) * 100).toFixed(0)}% do total` : '0%'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="card" style={{ background: 'linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%)', border: '1px solid #ffe69c' }}>
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', fontWeight: 700, color: '#856404', marginBottom: '8px' }}>
+                    {resourcesUrgentes}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#856404', fontWeight: 600 }}>RECURSOS URGENTES</div>
+                  <div style={{ fontSize: '12px', color: '#856404', marginTop: '4px' }}>
+                    {totalResources > 0 ? `${((resourcesUrgentes / totalResources) * 100).toFixed(0)}% do total` : '0%'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="card" style={{ background: 'linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%)', border: '1px solid #d6d8db' }}>
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', fontWeight: 700, color: '#383d41', marginBottom: '8px' }}>
+                    {resourcesInativos}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#383d41', fontWeight: 600 }}>RECURSOS INATIVOS</div>
+                  <div style={{ fontSize: '12px', color: '#383d41', marginTop: '4px' }}>
+                    {totalResources > 0 ? `${((resourcesInativos / totalResources) * 100).toFixed(0)}% do total` : '0%'}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

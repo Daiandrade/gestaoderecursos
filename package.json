@@ -10,10 +10,18 @@
     "frontend:install": "cd frontend && npm install",
     "install-all": "npm run backend:install && npm run frontend:install"
   },
-  "keywords": ["gestao", "recursos", "produtos"],
+  "keywords": [
+    "gestao",
+    "recursos",
+    "produtos"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "appwrite": "^25.2.0",
+    "dotenv": "^17.4.2"
   }
 }
