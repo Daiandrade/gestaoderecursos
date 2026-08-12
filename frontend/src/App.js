@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Resources from './pages/Resources';
+import Budget from './pages/Budget';
 import Expenses from './pages/Expenses';
 import Users from './pages/Users';
 import Navbar from './components/Navbar';
@@ -63,6 +64,14 @@ function AppContent() {
           element={
             <PrivateRoute>
               <Resources />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/budget"
+          element={
+            <PrivateRoute>
+              <Budget />
             </PrivateRoute>
           }
         />

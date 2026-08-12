@@ -29,6 +29,17 @@ export const expensesService = {
     }));
   },
 
+  // Todas as despesas de um ano, de todos os produtos (visão consolidada)
+  async getByYear(year) {
+    const queries = [
+      Query.equal('year', parseInt(year)),
+      Query.limit(2000)
+    ];
+
+    const res = await databases.listDocuments(DATABASE_ID, COLLECTIONS.EXPENSES, queries);
+    return res.documents.map(e => ({ id: e.$id, ...e }));
+  },
+
   // Totais mensais para gráfico
   async getMonthlyTotals(productId, year) {
     const queries = [
@@ -51,8 +62,16 @@ export const expensesService = {
     return Object.values(monthly).sort((a, b) => a.month - b.month);
   },
 
-  // Criar despesa
+  // Criar despesa (grava snapshot do budget atual do recurso)
   async create(data, currentUser) {
+    let budgetIdSnapshot = null;
+    try {
+      const resourceDoc = await databases.getDocument(DATABASE_ID, COLLECTIONS.RESOURCES, data.resource_id);
+      budgetIdSnapshot = resourceDoc.budget_id || null;
+    } catch (err) {
+      console.warn('Não foi possível obter o budget do recurso para snapshot:', err);
+    }
+
     const doc = await databases.createDocument(
       DATABASE_ID,
       COLLECTIONS.EXPENSES,
@@ -60,6 +79,7 @@ export const expensesService = {
       {
         resource_id: data.resource_id,
         product_id: data.product_id,
+        budget_id: budgetIdSnapshot,
         month: parseInt(data.month),
         year: parseInt(data.year),
         amount: parseFloat(data.amount),

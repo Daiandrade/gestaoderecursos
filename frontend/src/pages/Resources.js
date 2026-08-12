@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { resourcesService } from '../services/resourcesService';
 import { productsService } from '../services/productsService';
+import { budgetsService } from '../services/budgetsService';
 
 function Resources() {
   const { profile } = useAuth();
   const [resources, setResources] = useState([]);
   const [products, setProducts] = useState([]);
+  const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -20,11 +22,12 @@ function Resources() {
     product_id: '',
     job_title: '',
     job_description: '',
+    supplier: '',
     allocation_percentage: 100,
     status: 'ativo',
     start_date: '',
     end_date: '',
-    planned_value: 0
+    budget_id: ''
   });
 
   useEffect(() => {
@@ -37,10 +40,12 @@ function Resources() {
 
   const loadData = async () => {
     try {
-      const [allResources, allProducts] = await Promise.all([
+      const [allResources, allProducts, allBudgets] = await Promise.all([
         resourcesService.getAll(),
-        productsService.getAll()
+        productsService.getAll(),
+        budgetsService.getAll()
       ]);
+      setBudgets(allBudgets);
 
       // Filtrar se não for admin
       if (profile?.role === 'admin') {
@@ -85,11 +90,12 @@ function Resources() {
       product_id: resource.product_id,
       job_title: resource.job_title,
       job_description: resource.job_description || '',
+      supplier: resource.supplier || '',
       allocation_percentage: resource.allocation_percentage,
       status: resource.status,
       start_date: resource.start_date || '',
       end_date: resource.end_date || '',
-      planned_value: resource.planned_value || 0
+      budget_id: resource.budget_id || ''
     });
     setShowModal(true);
   };
@@ -122,23 +128,32 @@ function Resources() {
       product_id: profile?.role !== 'admin' ? profile?.product_id || '' : '',
       job_title: '',
       job_description: '',
+      supplier: '',
       allocation_percentage: 100,
       status: 'ativo',
       start_date: '',
       end_date: '',
-      planned_value: 0
+      budget_id: ''
     });
   };
 
   const formatCurrency = (value) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+  const formatBudgetLabel = (budget) => {
+    if (!budget) return '';
+    const start = budget.period_start ? new Date(budget.period_start).toLocaleDateString('pt-BR') : '?';
+    const end = budget.period_end ? new Date(budget.period_end).toLocaleDateString('pt-BR') : '?';
+    const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(budget.amount_usd || 0);
+    return `${start} — ${end} · ${usd}`;
+  };
+
   const filteredResources = resources.filter(r => {
     if (filterProduct && r.product_id !== filterProduct) return false;
     if (filterStatus && r.status !== filterStatus) return false;
     if (searchTerm) {
       const s = searchTerm.toLowerCase();
-      return r.name.toLowerCase().includes(s) || r.job_title.toLowerCase().includes(s);
+      return r.name.toLowerCase().includes(s) || r.job_title.toLowerCase().includes(s) || (r.supplier || '').toLowerCase().includes(s);
     }
     return true;
   });
@@ -163,7 +178,7 @@ function Resources() {
             <label>Buscar</label>
             <input
               type="text"
-              placeholder="Nome ou cargo..."
+              placeholder="Nome, cargo ou fornecedor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -196,10 +211,11 @@ function Resources() {
                   <th>Nome</th>
                   <th>Produto</th>
                   <th>Cargo</th>
+                  <th>Fornecedor</th>
                   <th>Período</th>
                   <th>Alocação</th>
                   <th>Status</th>
-                  <th>Valor Planejado</th>
+                  <th>Budget</th>
                   <th>Valor Real</th>
                   <th style={{ width: '220px' }}>Ações</th>
                 </tr>
@@ -207,7 +223,7 @@ function Resources() {
               <tbody>
                 {filteredResources.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="text-center text-muted" style={{ padding: '40px' }}>
+                    <td colSpan="10" className="text-center text-muted" style={{ padding: '40px' }}>
                       Nenhum recurso encontrado
                     </td>
                   </tr>
@@ -237,11 +253,16 @@ function Resources() {
                         <td><strong>{resource.name}</strong></td>
                         <td><span className="badge badge-orange">{resource.product_name}</span></td>
                         <td>{resource.job_title}</td>
+                        <td>{resource.supplier || <span className="text-muted">-</span>}</td>
                         <td className="text-muted" style={{ fontSize: '13px' }}>{period}</td>
                         <td><strong>{resource.allocation_percentage}%</strong></td>
                         <td>{getStatusBadge(resource.status)}</td>
-                        <td className="font-semibold">
-                          {formatCurrency(parseFloat(resource.planned_value || 0))}
+                        <td>
+                          {resource.budget ? (
+                            <span className="badge badge-info">{formatBudgetLabel(resource.budget)}</span>
+                          ) : (
+                            <span className="text-muted" style={{ fontSize: '13px' }}>Sem budget</span>
+                          )}
                         </td>
                         <td className="font-semibold">
                           {formatCurrency(parseFloat(resource.actual_value || 0))}
@@ -303,15 +324,27 @@ function Resources() {
                     </div>
                   </div>
 
-                  <div>
-                    <label>Cargo / Função *</label>
-                    <input
-                      type="text"
-                      value={formData.job_title}
-                      onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
-                      placeholder="Ex: Desenvolvedor Senior, Tech Lead, Product Manager..."
-                      required
-                    />
+                  <div className="form-row">
+                    <div>
+                      <label>Cargo / Função *</label>
+                      <input
+                        type="text"
+                        value={formData.job_title}
+                        onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                        placeholder="Ex: Desenvolvedor Senior, Tech Lead, Product Manager..."
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label>Fornecedor</label>
+                      <input
+                        type="text"
+                        value={formData.supplier}
+                        onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                        placeholder="Ex: Accenture, TCS, Contratação direta..."
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -377,17 +410,20 @@ function Resources() {
                   </div>
 
                   <div>
-                    <label>Valor Planejado (R$)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.planned_value}
-                      onChange={(e) => setFormData({ ...formData, planned_value: parseFloat(e.target.value) || 0 })}
-                      placeholder="0.00"
-                    />
+                    <label>Budget Atual</label>
+                    <select
+                      value={formData.budget_id}
+                      onChange={(e) => setFormData({ ...formData, budget_id: e.target.value })}
+                    >
+                      <option value="">Nenhum budget vinculado</option>
+                      {budgets.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.description ? `${b.description} · ` : ''}{formatBudgetLabel(b)}
+                        </option>
+                      ))}
+                    </select>
                     <div className="form-hint">
-                      Valor estimado/planejado para este recurso. O valor real será calculado automaticamente das despesas.
+                      Despesas já lançadas na Conta Corrente não são afetadas se o recurso trocar de budget depois.
                     </div>
                   </div>
                 </div>
@@ -431,6 +467,14 @@ function Resources() {
                          selectedResource.status === 'urgente' ? 'Urgente' : 'Inativo'}
                       </span>
                       <span className="badge badge-info">{selectedResource.allocation_percentage}% alocado</span>
+                      {selectedResource.supplier && (
+                        <span className="badge badge-secondary">Fornecedor: {selectedResource.supplier}</span>
+                      )}
+                      {selectedResource.budget ? (
+                        <span className="badge badge-orange">Budget: {formatBudgetLabel(selectedResource.budget)}</span>
+                      ) : (
+                        <span className="badge badge-info">Sem budget vinculado</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -458,18 +502,7 @@ function Resources() {
                       Valores
                     </label>
                     <div style={{ fontSize: '15px' }}>
-                      <strong>Planejado:</strong> {formatCurrency(parseFloat(selectedResource.planned_value || 0))}
-                      <br />
                       <strong>Real (Despesas):</strong> {formatCurrency(parseFloat(selectedResource.actual_value || 0))}
-                      <br />
-                      {selectedResource.planned_value > 0 && (
-                        <span style={{
-                          color: selectedResource.actual_value > selectedResource.planned_value ? '#dc3545' : '#28a745',
-                          fontWeight: 600
-                        }}>
-                          {((selectedResource.actual_value / selectedResource.planned_value) * 100).toFixed(1)}% do planejado
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>

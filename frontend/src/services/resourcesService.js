@@ -8,14 +8,18 @@ export const resourcesService = {
       queries.push(Query.equal('product_id', productIdFilter));
     }
 
-    const [resourcesRes, productsRes, expensesRes] = await Promise.all([
+    const [resourcesRes, productsRes, expensesRes, budgetsRes] = await Promise.all([
       databases.listDocuments(DATABASE_ID, COLLECTIONS.RESOURCES, queries),
       databases.listDocuments(DATABASE_ID, COLLECTIONS.PRODUCTS, [Query.limit(50)]),
-      databases.listDocuments(DATABASE_ID, COLLECTIONS.EXPENSES, [Query.limit(2000)])
+      databases.listDocuments(DATABASE_ID, COLLECTIONS.EXPENSES, [Query.limit(2000)]),
+      databases.listDocuments(DATABASE_ID, COLLECTIONS.BUDGETS, [Query.limit(500)])
     ]);
 
     const productsMap = {};
     productsRes.documents.forEach(p => { productsMap[p.$id] = p.name; });
+
+    const budgetsMap = {};
+    budgetsRes.documents.forEach(b => { budgetsMap[b.$id] = { id: b.$id, ...b }; });
 
     return resourcesRes.documents.map(r => {
       const resourceExpenses = expensesRes.documents.filter(e => e.resource_id === r.$id);
@@ -27,7 +31,8 @@ export const resourcesService = {
         product_name: productsMap[r.product_id] || 'Desconhecido',
         total_expenses: totalExpenses,
         actual_value: totalExpenses, // valor real = soma das despesas
-        expense_count: resourceExpenses.length
+        expense_count: resourceExpenses.length,
+        budget: budgetsMap[r.budget_id] || null
       };
     });
   },
@@ -47,11 +52,12 @@ export const resourcesService = {
         product_id: data.product_id,
         job_title: data.job_title,
         job_description: data.job_description || '',
+        supplier: data.supplier || '',
         allocation_percentage: parseInt(data.allocation_percentage) || 100,
         status: data.status || 'ativo',
         start_date: data.start_date || null,
         end_date: data.end_date || null,
-        planned_value: parseFloat(data.planned_value) || 0
+        budget_id: data.budget_id || null
       }
     );
     return { id: doc.$id, ...doc };
@@ -66,11 +72,12 @@ export const resourcesService = {
         name: data.name,
         job_title: data.job_title,
         job_description: data.job_description || '',
+        supplier: data.supplier || '',
         allocation_percentage: parseInt(data.allocation_percentage) || 100,
         status: data.status,
         start_date: data.start_date || null,
         end_date: data.end_date || null,
-        planned_value: parseFloat(data.planned_value) || 0
+        budget_id: data.budget_id || null
       }
     );
     return { id: doc.$id, ...doc };

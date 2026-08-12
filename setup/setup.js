@@ -177,20 +177,40 @@ async function setupResourcesCollection() {
     'Attribute: job_description'
   );
   await ignoreIfExists(
+    databases.createStringAttribute(DATABASE_ID, COL, 'supplier', 150, false),
+    'Attribute: supplier'
+  );
+  await ignoreIfExists(
     databases.createIntegerAttribute(DATABASE_ID, COL, 'allocation_percentage', false, 0, 100, 100),
     'Attribute: allocation_percentage'
   );
   await ignoreIfExists(
-    databases.createEnumAttribute(DATABASE_ID, COL, 'status', ['active', 'inactive'], false, 'active'),
+    databases.createEnumAttribute(DATABASE_ID, COL, 'status', ['ativo', 'urgente', 'inativo'], false, 'ativo'),
     'Attribute: status'
+  );
+  await ignoreIfExists(
+    databases.createStringAttribute(DATABASE_ID, COL, 'budget_id', 50, false),
+    'Attribute: budget_id'
+  );
+  await ignoreIfExists(
+    databases.createDatetimeAttribute(DATABASE_ID, COL, 'start_date', false),
+    'Attribute: start_date'
+  );
+  await ignoreIfExists(
+    databases.createDatetimeAttribute(DATABASE_ID, COL, 'end_date', false),
+    'Attribute: end_date'
   );
 
   await waitForAttribute(COL, 'name');
   await waitForAttribute(COL, 'product_id');
   await waitForAttribute(COL, 'job_title');
   await waitForAttribute(COL, 'job_description');
+  await waitForAttribute(COL, 'supplier');
   await waitForAttribute(COL, 'allocation_percentage');
   await waitForAttribute(COL, 'status');
+  await waitForAttribute(COL, 'budget_id');
+  await waitForAttribute(COL, 'start_date');
+  await waitForAttribute(COL, 'end_date');
 
   await ignoreIfExists(
     databases.createIndex(DATABASE_ID, COL, 'product_id_index', 'key', ['product_id'], ['ASC']),
@@ -199,6 +219,10 @@ async function setupResourcesCollection() {
   await ignoreIfExists(
     databases.createIndex(DATABASE_ID, COL, 'status_index', 'key', ['status'], ['ASC']),
     'Index: status_index'
+  );
+  await ignoreIfExists(
+    databases.createIndex(DATABASE_ID, COL, 'budget_id_index', 'key', ['budget_id'], ['ASC']),
+    'Index: budget_id_index'
   );
 }
 
@@ -245,6 +269,10 @@ async function setupExpensesCollection() {
     databases.createStringAttribute(DATABASE_ID, COL, 'created_by_name', 100, false),
     'Attribute: created_by_name'
   );
+  await ignoreIfExists(
+    databases.createStringAttribute(DATABASE_ID, COL, 'budget_id', 50, false),
+    'Attribute: budget_id'
+  );
 
   await waitForAttribute(COL, 'resource_id');
   await waitForAttribute(COL, 'product_id');
@@ -252,6 +280,7 @@ async function setupExpensesCollection() {
   await waitForAttribute(COL, 'year');
   await waitForAttribute(COL, 'amount');
   await waitForAttribute(COL, 'description');
+  await waitForAttribute(COL, 'budget_id');
 
   await ignoreIfExists(
     databases.createIndex(DATABASE_ID, COL, 'resource_id_index', 'key', ['resource_id'], ['ASC']),
@@ -264,6 +293,87 @@ async function setupExpensesCollection() {
   await ignoreIfExists(
     databases.createIndex(DATABASE_ID, COL, 'year_month_index', 'key', ['year', 'month'], ['DESC', 'DESC']),
     'Index: year_month_index'
+  );
+  await ignoreIfExists(
+    databases.createIndex(DATABASE_ID, COL, 'budget_id_index', 'key', ['budget_id'], ['ASC']),
+    'Index: budget_id_index'
+  );
+}
+
+async function setupBudgetsCollection() {
+  console.log('\n💵 Configurando collection: budgets');
+  const COL = 'budgets';
+
+  await createCollection(COL, 'Budgets', [
+    Permission.read(Role.users()),
+    Permission.create(Role.users()),
+    Permission.update(Role.users()),
+    Permission.delete(Role.users())
+  ]);
+
+  await ignoreIfExists(
+    databases.createStringAttribute(DATABASE_ID, COL, 'description', 1000, false),
+    'Attribute: description'
+  );
+  await ignoreIfExists(
+    databases.createStringAttribute(DATABASE_ID, COL, 'requested_by', 150, true),
+    'Attribute: requested_by'
+  );
+  await ignoreIfExists(
+    databases.createStringAttribute(DATABASE_ID, COL, 'approved_by', 150, false),
+    'Attribute: approved_by'
+  );
+  await ignoreIfExists(
+    databases.createDatetimeAttribute(DATABASE_ID, COL, 'approval_date', false),
+    'Attribute: approval_date'
+  );
+  await ignoreIfExists(
+    databases.createDatetimeAttribute(DATABASE_ID, COL, 'period_start', true),
+    'Attribute: period_start'
+  );
+  await ignoreIfExists(
+    databases.createDatetimeAttribute(DATABASE_ID, COL, 'period_end', true),
+    'Attribute: period_end'
+  );
+  await ignoreIfExists(
+    databases.createIntegerAttribute(DATABASE_ID, COL, 'approved_resources', false, 0, 10000, 0),
+    'Attribute: approved_resources'
+  );
+  await ignoreIfExists(
+    databases.createFloatAttribute(DATABASE_ID, COL, 'amount_usd', true, 0),
+    'Attribute: amount_usd'
+  );
+  await ignoreIfExists(
+    databases.createFloatAttribute(DATABASE_ID, COL, 'exchange_rate', true, 0),
+    'Attribute: exchange_rate'
+  );
+  await ignoreIfExists(
+    databases.createFloatAttribute(DATABASE_ID, COL, 'amount_brl', true, 0),
+    'Attribute: amount_brl'
+  );
+  await ignoreIfExists(
+    databases.createStringAttribute(DATABASE_ID, COL, 'created_by', 50, false),
+    'Attribute: created_by'
+  );
+  await ignoreIfExists(
+    databases.createStringAttribute(DATABASE_ID, COL, 'created_by_name', 100, false),
+    'Attribute: created_by_name'
+  );
+
+  await waitForAttribute(COL, 'description');
+  await waitForAttribute(COL, 'requested_by');
+  await waitForAttribute(COL, 'approved_by');
+  await waitForAttribute(COL, 'approval_date');
+  await waitForAttribute(COL, 'period_start');
+  await waitForAttribute(COL, 'period_end');
+  await waitForAttribute(COL, 'approved_resources');
+  await waitForAttribute(COL, 'amount_usd');
+  await waitForAttribute(COL, 'exchange_rate');
+  await waitForAttribute(COL, 'amount_brl');
+
+  await ignoreIfExists(
+    databases.createIndex(DATABASE_ID, COL, 'period_index', 'key', ['period_start'], ['DESC']),
+    'Index: period_index'
   );
 }
 
@@ -377,6 +487,7 @@ async function main() {
     await setupUserProfilesCollection();
     await setupResourcesCollection();
     await setupExpensesCollection();
+    await setupBudgetsCollection();
     await setupHistoryCollection();
     await seedProducts();
 

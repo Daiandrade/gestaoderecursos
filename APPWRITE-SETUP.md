@@ -22,7 +22,7 @@ Guia passo a passo para criar Database e Collections no painel Appwrite.
 
 ## 📋 PASSO 2 — Criar as Collections
 
-Dentro do database `gestao_recursos`, crie as 5 collections abaixo.
+Dentro do database `gestao_recursos`, crie as 6 collections abaixo.
 
 ---
 
@@ -136,7 +136,41 @@ Guarda dados extras dos usuários (role, produto vinculado).
 
 ---
 
-### 🟢 Collection 5: `history`
+### 🟢 Collection 5: `budgets`
+
+Registro geral de budgets aprovados (não vinculado a um produto específico).
+
+1. **Create collection**
+2. **Collection ID**: `budgets`
+3. **Name**: `Budgets`
+4. **Permissions**:
+   - Role: **Users** → ✅ Read, ✅ Create, ✅ Update, ✅ Delete
+
+5. **Attributes**:
+
+| Attribute Key | Type | Size | Required | Default |
+|---------------|------|------|----------|---------|
+| `description` | String | 1000 | ❌ Não | - |
+| `requested_by` | String | 150 | ✅ Sim | - |
+| `approved_by` | String | 150 | ❌ Não | - |
+| `approval_date` | Datetime | - | ❌ Não | - |
+| `period_start` | Datetime | - | ✅ Sim | - |
+| `period_end` | Datetime | - | ✅ Sim | - |
+| `approved_resources` | Integer | - | ❌ Não | 0 |
+| `amount_usd` | Float | - | ✅ Sim | - |
+| `exchange_rate` | Float | - | ✅ Sim | - |
+| `amount_brl` | Float | - | ✅ Sim | - |
+| `created_by` | String | 50 | ❌ Não | - |
+| `created_by_name` | String | 100 | ❌ Não | - |
+
+> `amount_brl` é calculado pelo frontend (`amount_usd * exchange_rate`) no momento de salvar, para permitir somatórios/relatórios sem reconverter.
+
+6. **Indexes**:
+   - `period_index`: type `key`, attribute `period_start` (DESC)
+
+---
+
+### 🟢 Collection 6: `history`
 
 Registro de auditoria.
 
@@ -233,6 +267,7 @@ Antes de testar o sistema, confirme:
 - [ ] Collection `user_profiles` criada
 - [ ] Collection `resources` criada
 - [ ] Collection `expenses` criada
+- [ ] Collection `budgets` criada
 - [ ] Collection `history` criada
 - [ ] Auth Email/Password habilitado
 - [ ] Usuário admin criado em Auth → Users

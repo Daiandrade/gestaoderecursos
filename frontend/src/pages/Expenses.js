@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { NumericFormat } from 'react-number-format';
 import { useAuth } from '../context/AuthContext';
 import { expensesService } from '../services/expensesService';
 import { productsService } from '../services/productsService';
@@ -14,6 +15,8 @@ function Expenses() {
   const [selectedProduct, setSelectedProduct] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [monthlyData, setMonthlyData] = useState([]);
+  const [viewMode, setViewMode] = useState('product'); // 'product' | 'consolidated'
+  const [yearExpenses, setYearExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -52,6 +55,13 @@ function Expenses() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProduct, selectedYear]);
+
+  useEffect(() => {
+    if (viewMode === 'consolidated') {
+      loadYearExpenses();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, selectedYear, products]);
 
   const loadInitial = async () => {
     try {
@@ -105,6 +115,16 @@ function Expenses() {
       setMonthlyData(result);
     } catch (error) {
       console.error('Erro mensal:', error);
+    }
+  };
+
+  const loadYearExpenses = async () => {
+    try {
+      const data = await expensesService.getByYear(selectedYear);
+      const allowedProductIds = products.map(p => p.id);
+      setYearExpenses(data.filter(e => allowedProductIds.includes(e.product_id)));
+    } catch (error) {
+      console.error('Erro ao carregar consolidado:', error);
     }
   };
 
@@ -186,6 +206,36 @@ function Expenses() {
   const avgMonthly = monthsWithData > 0 ? totalYear / monthsWithData : 0;
   const maxMonth = monthlyData.reduce((max, m) => m.valor > max.valor ? m : max, { month: '-', valor: 0 });
 
+  // Matriz consolidada: produto x mês, com totais por linha, por coluna e geral
+  const consolidatedMatrix = products.map(product => {
+    const productExpenses = yearExpenses.filter(e => e.product_id === product.id);
+    const monthTotals = months.map((_, index) => {
+      const monthNumber = index + 1;
+      return productExpenses
+        .filter(e => e.month === monthNumber)
+        .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+    });
+    return {
+      productId: product.id,
+      productName: product.name,
+      monthTotals,
+      total: monthTotals.reduce((sum, v) => sum + v, 0)
+    };
+  });
+
+  const consolidatedMonthTotals = months.map((_, index) =>
+    consolidatedMatrix.reduce((sum, row) => sum + row.monthTotals[index], 0)
+  );
+  const consolidatedGrandTotal = consolidatedMonthTotals.reduce((sum, v) => sum + v, 0);
+  const consolidatedMonthsWithData = consolidatedMonthTotals.filter(v => v > 0).length;
+  const consolidatedAvgMonthly = consolidatedMonthsWithData > 0
+    ? consolidatedGrandTotal / consolidatedMonthsWithData
+    : 0;
+  const consolidatedChartData = months.map((month, index) => ({
+    month: month.substring(0, 3),
+    valor: consolidatedMonthTotals[index]
+  }));
+
   if (loading) return <div className="loading">Carregando despesas...</div>;
 
   const currentProductName = products.find(p => p.id === selectedProduct)?.name || '';
@@ -213,12 +263,48 @@ function Expenses() {
     ]
   });
 
+  const buildConsolidatedReportSections = () => ({
+    title: 'Conta Corrente - Consolidado',
+    subtitle: `Todos os produtos · Ano: ${selectedYear}`,
+    sections: [
+      {
+        heading: 'Consolidado por Produto e Mês',
+        columns: ['Produto', ...months.map(m => m.substring(0, 3)), 'Total'],
+        rows: [
+          ...consolidatedMatrix.map(row => [
+            row.productName,
+            ...row.monthTotals.map(v => formatCurrency(v)),
+            formatCurrency(row.total)
+          ]),
+          [
+            'Total Geral',
+            ...consolidatedMonthTotals.map(v => formatCurrency(v)),
+            formatCurrency(consolidatedGrandTotal)
+          ]
+        ]
+      }
+    ]
+  });
+
   const handleExportPDF = () => {
+    if (viewMode === 'consolidated') {
+      const { title, subtitle, sections } = buildConsolidatedReportSections();
+      exportPDF({ title, subtitle, sections, filename: `despesas-consolidado-${selectedYear}` });
+      return;
+    }
     const { title, subtitle, sections } = buildReportSections();
     exportPDF({ title, subtitle, sections, filename: `despesas-${currentProductName}-${selectedYear}` });
   };
 
   const handleExportExcel = () => {
+    if (viewMode === 'consolidated') {
+      const { sections } = buildConsolidatedReportSections();
+      exportExcel({
+        filename: `despesas-consolidado-${selectedYear}`,
+        sheets: sections.map(s => ({ name: s.heading, columns: s.columns, rows: s.rows }))
+      });
+      return;
+    }
     const { sections } = buildReportSections();
     exportExcel({
       filename: `despesas-${currentProductName}-${selectedYear}`,
@@ -235,27 +321,39 @@ function Expenses() {
             <p className="page-subtitle">Controle financeiro de despesas mensais por produto</p>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={handleExportPDF} className="btn-secondary" disabled={!selectedProduct}>
+            <button onClick={handleExportPDF} className="btn-secondary" disabled={viewMode === 'product' && !selectedProduct}>
               Exportar PDF
             </button>
-            <button onClick={handleExportExcel} className="btn-secondary" disabled={!selectedProduct}>
+            <button onClick={handleExportExcel} className="btn-secondary" disabled={viewMode === 'product' && !selectedProduct}>
               Exportar Excel
             </button>
-            <button onClick={handleAdd} className="btn-primary" disabled={!selectedProduct}>
-              + Nova Despesa
-            </button>
+            {viewMode === 'product' && (
+              <button onClick={handleAdd} className="btn-primary" disabled={!selectedProduct}>
+                + Nova Despesa
+              </button>
+            )}
           </div>
         </div>
 
         <div className="filter-bar">
           <div className="filter-group">
-            <label>Produto</label>
-            <select value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)}>
-              {products.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+            <label>Visão</label>
+            <select value={viewMode} onChange={(e) => setViewMode(e.target.value)}>
+              <option value="product">Por Produto</option>
+              <option value="consolidated">Consolidado (Todos os Produtos)</option>
             </select>
           </div>
+
+          {viewMode === 'product' && (
+            <div className="filter-group">
+              <label>Produto</label>
+              <select value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value)}>
+                {products.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="filter-group">
             <label>Ano</label>
@@ -267,6 +365,123 @@ function Expenses() {
           </div>
         </div>
 
+        {viewMode === 'consolidated' ? (
+        <>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-card-header">
+              <div>
+                <div className="stat-label">Total {selectedYear}</div>
+                <div className="stat-value">{formatCurrency(consolidatedGrandTotal)}</div>
+                <div className="stat-change">Todos os produtos</div>
+              </div>
+              <div className="stat-icon">💰</div>
+            </div>
+          </div>
+
+          <div className="stat-card info">
+            <div className="stat-card-header">
+              <div>
+                <div className="stat-label">Média Mensal</div>
+                <div className="stat-value">{formatCurrency(consolidatedAvgMonthly)}</div>
+                <div className="stat-change">Por mês</div>
+              </div>
+              <div className="stat-icon info">📊</div>
+            </div>
+          </div>
+
+          <div className="stat-card success">
+            <div className="stat-card-header">
+              <div>
+                <div className="stat-label">Produtos</div>
+                <div className="stat-value">{products.length}</div>
+                <div className="stat-change positive">Na visão consolidada</div>
+              </div>
+              <div className="stat-icon success">📦</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <span>Evolução de Despesas - Consolidado ({selectedYear})</span>
+            <span className="card-subtitle">Valores em R$ · Todos os produtos</span>
+          </div>
+          <ResponsiveContainer width="100%" height={320}>
+            <AreaChart data={consolidatedChartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorConsolidado" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#0052CC" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="#0052CC" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6E6E6E' }} />
+              <YAxis tick={{ fontSize: 12, fill: '#6E6E6E' }} />
+              <Tooltip formatter={(value) => formatCurrency(value)} />
+              <Area type="monotone" dataKey="valor" stroke="#0052CC" strokeWidth={3} fillOpacity={1} fill="url(#colorConsolidado)" name="Despesas" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div className="card">
+          <div className="card-header">
+            <span>Consolidado por Produto e Mês</span>
+            <span className="card-subtitle">{products.length} produto(s)</span>
+          </div>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  {months.map((month, index) => (
+                    <th key={index} style={{ textAlign: 'right' }}>{month.substring(0, 3)}</th>
+                  ))}
+                  <th style={{ textAlign: 'right' }}>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {consolidatedMatrix.length === 0 ? (
+                  <tr>
+                    <td colSpan={months.length + 2} className="text-center text-muted" style={{ padding: '40px' }}>
+                      Nenhum produto disponível
+                    </td>
+                  </tr>
+                ) : (
+                  <>
+                    {consolidatedMatrix.map(row => (
+                      <tr key={row.productId}>
+                        <td><strong>{row.productName}</strong></td>
+                        {row.monthTotals.map((value, index) => (
+                          <td key={index} style={{ textAlign: 'right' }} className={value > 0 ? 'font-semibold' : 'text-muted'}>
+                            {value > 0 ? formatCurrency(value) : '-'}
+                          </td>
+                        ))}
+                        <td style={{ textAlign: 'right' }} className="font-semibold text-primary">
+                          {formatCurrency(row.total)}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr>
+                      <td><strong>Total Geral</strong></td>
+                      {consolidatedMonthTotals.map((value, index) => (
+                        <td key={index} style={{ textAlign: 'right' }} className="font-semibold">
+                          {formatCurrency(value)}
+                        </td>
+                      ))}
+                      <td style={{ textAlign: 'right' }} className="font-semibold text-primary">
+                        {formatCurrency(consolidatedGrandTotal)}
+                      </td>
+                    </tr>
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        </>
+        ) : (
+        <>
         <div className="stats-grid">
           <div className="stat-card">
             <div className="stat-card-header">
@@ -379,6 +594,8 @@ function Expenses() {
             </table>
           </div>
         </div>
+        </>
+        )}
 
         {showModal && (
           <div className="modal-overlay" onClick={() => setShowModal(false)}>
@@ -434,11 +651,14 @@ function Expenses() {
 
                   <div>
                     <label>Valor (R$) *</label>
-                    <input
-                      type="number"
-                      step="0.01"
+                    <NumericFormat
+                      thousandSeparator="."
+                      decimalSeparator=","
+                      decimalScale={2}
+                      fixedDecimalScale={false}
+                      allowNegative={false}
                       value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      onValueChange={(v) => setFormData({ ...formData, amount: v.value })}
                       placeholder="0,00"
                       required
                     />

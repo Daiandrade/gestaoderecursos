@@ -31,6 +31,7 @@ function Navbar() {
             <li><Link to="/dashboard" className={isActive('/dashboard') ? 'active' : ''}>Dashboard</Link></li>
             <li><Link to="/products" className={isActive('/products') ? 'active' : ''}>Produtos</Link></li>
             <li><Link to="/resources" className={isActive('/resources') ? 'active' : ''}>Recursos</Link></li>
+            <li><Link to="/budget" className={isActive('/budget') ? 'active' : ''}>Budget</Link></li>
             <li><Link to="/expenses" className={isActive('/expenses') ? 'active' : ''}>Conta Corrente</Link></li>
             {isAdmin() && (
               <li><Link to="/users" className={isActive('/users') ? 'active' : ''}>Usuários</Link></li>

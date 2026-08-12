@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { productsService } from '../services/productsService';
 import { resourcesService } from '../services/resourcesService';
+import { budgetsService } from '../services/budgetsService';
 import { exportPDF, exportExcel } from '../utils/reportExport';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -13,32 +14,38 @@ const COLORS = ['#FA6400', '#1A1B27', '#0052CC', '#00875A'];
 function Dashboard() {
   const [products, setProducts] = useState([]);
   const [resources, setResources] = useState([]);
+  const [budgets, setBudgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const { profile, isAdmin } = useAuth();
 
   useEffect(() => {
     loadData();
 
-    // Realtime: atualiza quando produtos, recursos ou despesas mudam
+    // Realtime: atualiza quando produtos, recursos, despesas ou budget mudam
     const unsubProducts = productsService.subscribe(() => loadData());
     const unsubResources = resourcesService.subscribe(() => loadData());
+    const unsubBudgets = budgetsService.subscribe(() => loadData());
 
     return () => {
       unsubProducts?.();
       unsubResources?.();
+      unsubBudgets?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async () => {
     try {
-      // Buscar todos os produtos e recursos
-      const [allProducts, allResources] = await Promise.all([
+      // Buscar todos os produtos, recursos e budgets (budget é geral, não filtra por produto)
+      const [allProducts, allResources, allBudgets] = await Promise.all([
         productsService.getAll(),
-        resourcesService.getAll()
+        resourcesService.getAll(),
+        budgetsService.getAllWithSpending()
       ]);
 
-      // Filtrar se não for admin
+      setBudgets(allBudgets);
+
+      // Filtrar produtos/recursos se não for admin
       if (profile?.role === 'admin') {
         setProducts(allProducts);
         setResources(allResources);
@@ -66,8 +73,18 @@ function Dashboard() {
   const resourcesInativos = resources.filter(r => r.status === 'inativo').length;
   const totalResources = resourcesAtivos + resourcesUrgentes + resourcesInativos;
   const totalExpenses = resources.reduce((sum, r) => sum + parseFloat(r.total_expenses || 0), 0);
-  const totalPlanned = resources.reduce((sum, r) => sum + parseFloat(r.planned_value || 0), 0);
   const avgExpensePerResource = totalResources > 0 ? totalExpenses / totalResources : 0;
+
+  const totalBudgetBrl = budgets.reduce((sum, b) => sum + parseFloat(b.amount_brl || 0), 0);
+  const totalBudgetUsd = budgets.reduce((sum, b) => sum + parseFloat(b.amount_usd || 0), 0);
+  const totalBudgetResources = budgets.reduce((sum, b) => sum + parseInt(b.approved_resources || 0), 0);
+  const totalBudgetSpentUsd = budgets.reduce((sum, b) => sum + parseFloat(b.spent_usd || 0), 0);
+  const totalBudgetRemainingUsd = totalBudgetUsd - totalBudgetSpentUsd;
+  const totalBudgetSpentBrl = budgets.reduce((sum, b) => sum + parseFloat(b.spent_brl || 0), 0);
+  const totalBudgetRemainingBrl = totalBudgetBrl - totalBudgetSpentBrl;
+  const budgetWarningCount = budgets.filter(b => b.status_level === 'warning').length;
+  const budgetCriticalCount = budgets.filter(b => b.status_level === 'critical').length;
+  const budgetAlertCount = budgetWarningCount + budgetCriticalCount;
 
   const productData = products.map(p => ({
     name: p.name,
@@ -83,12 +100,31 @@ function Dashboard() {
   const formatCurrency = (value) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+  const formatUsd = (value) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+
   const buildReportSections = () => ({
     title: 'Dashboard Gerencial',
     subtitle: isAdmin()
       ? 'Visão consolidada de todos os produtos e recursos'
       : `Gerenciando: ${products[0]?.name || 'Nenhum produto atribuído'}`,
     sections: [
+      {
+        heading: 'Budget Aprovado (Geral)',
+        columns: ['Indicador', 'Valor'],
+        rows: [
+          ['Total Aprovado (US$)', formatUsd(totalBudgetUsd)],
+          ['Total Usado (US$)', formatUsd(totalBudgetSpentUsd)],
+          ['Total Restante (US$)', formatUsd(totalBudgetRemainingUsd)],
+          ['Total Aprovado (R$)', formatCurrency(totalBudgetBrl)],
+          ['Total Usado (R$)', formatCurrency(totalBudgetSpentBrl)],
+          ['Total Restante (R$)', formatCurrency(totalBudgetRemainingBrl)],
+          ['Recursos Aprovados', String(totalBudgetResources)],
+          ['Lançamentos de Budget', String(budgets.length)],
+          ['Budgets em Aviso', String(budgetWarningCount)],
+          ['Budgets em Crítico', String(budgetCriticalCount)]
+        ]
+      },
       {
         heading: 'Resumo Geral',
         columns: ['Indicador', 'Valor'],
@@ -97,9 +133,7 @@ function Dashboard() {
           ['Recursos Ativos', String(resourcesAtivos)],
           ['Recursos Urgentes', String(resourcesUrgentes)],
           ['Recursos Inativos', String(resourcesInativos)],
-          ['Valor Planejado', formatCurrency(totalPlanned)],
           ['Valor Real (Despesas)', formatCurrency(totalExpenses)],
-          ['Variação', totalPlanned > 0 ? `${((totalExpenses / totalPlanned) * 100).toFixed(1)}%` : '-'],
           ['Custo Médio por Recurso', formatCurrency(avgExpensePerResource)]
         ]
       },
@@ -148,7 +182,124 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="stats-grid">
+        <div className="card">
+          <div className="card-header">
+            <span>Budget Aprovado</span>
+            <span className="card-subtitle">Visão geral, não vinculado a produto</span>
+          </div>
+          <div style={{ padding: '20px' }}>
+            <div className="stats-grid">
+              <div className="stat-card info">
+                <div className="stat-card-header">
+                  <div>
+                    <div className="stat-label">Total Aprovado (US$)</div>
+                    <div className="stat-value">{formatUsd(totalBudgetUsd)}</div>
+                    <div className="stat-change">Original</div>
+                  </div>
+                  <div className="stat-icon info">💵</div>
+                </div>
+              </div>
+
+              <div className="stat-card info">
+                <div className="stat-card-header">
+                  <div>
+                    <div className="stat-label">Total Usado (US$)</div>
+                    <div className="stat-value">{formatUsd(totalBudgetSpentUsd)}</div>
+                    <div className="stat-change">
+                      {totalBudgetUsd > 0 ? `${((totalBudgetSpentUsd / totalBudgetUsd) * 100).toFixed(1)}% do aprovado` : 'Consumido'}
+                    </div>
+                  </div>
+                  <div className="stat-icon info">📉</div>
+                </div>
+              </div>
+
+              <div className="stat-card success">
+                <div className="stat-card-header">
+                  <div>
+                    <div className="stat-label">Total Restante (US$)</div>
+                    <div className="stat-value">{formatUsd(totalBudgetRemainingUsd)}</div>
+                    <div className="stat-change positive">Disponível</div>
+                  </div>
+                  <div className="stat-icon success">✅</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="stats-grid" style={{ marginTop: '16px' }}>
+              <div className="stat-card">
+                <div className="stat-card-header">
+                  <div>
+                    <div className="stat-label">Total Aprovado (R$)</div>
+                    <div className="stat-value">{formatCurrency(totalBudgetBrl)}</div>
+                    <div className="stat-change">Convertido</div>
+                  </div>
+                  <div className="stat-icon">💰</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-card-header">
+                  <div>
+                    <div className="stat-label">Total Usado (R$)</div>
+                    <div className="stat-value">{formatCurrency(totalBudgetSpentBrl)}</div>
+                    <div className="stat-change">
+                      {totalBudgetBrl > 0 ? `${((totalBudgetSpentBrl / totalBudgetBrl) * 100).toFixed(1)}% do aprovado` : 'Consumido'}
+                    </div>
+                  </div>
+                  <div className="stat-icon">📉</div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-card-header">
+                  <div>
+                    <div className="stat-label">Total Restante (R$)</div>
+                    <div className="stat-value">{formatCurrency(totalBudgetRemainingBrl)}</div>
+                    <div className="stat-change positive">Disponível</div>
+                  </div>
+                  <div className="stat-icon">✅</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="stats-grid" style={{ marginTop: '16px' }}>
+              <div className="stat-card success">
+                <div className="stat-card-header">
+                  <div>
+                    <div className="stat-label">Recursos Aprovados</div>
+                    <div className="stat-value">{totalBudgetResources}</div>
+                    <div className="stat-change positive">Soma dos budgets</div>
+                  </div>
+                  <div className="stat-icon success">👥</div>
+                </div>
+              </div>
+
+              <div className="stat-card warning">
+                <div className="stat-card-header">
+                  <div>
+                    <div className="stat-label">Lançamentos</div>
+                    <div className="stat-value">{budgets.length}</div>
+                    <div className="stat-change">Budgets registrados</div>
+                  </div>
+                  <div className="stat-icon warning">📝</div>
+                </div>
+              </div>
+
+              <div className="stat-card danger">
+                <div className="stat-card-header">
+                  <div>
+                    <div className="stat-label">Budgets em Alerta</div>
+                    <div className="stat-value">{budgetAlertCount}</div>
+                    <div className="stat-change">{budgetWarningCount} aviso · {budgetCriticalCount} crítico</div>
+                  </div>
+                  <div className="stat-icon danger">⚠️</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="stats-grid" style={{ marginTop: '20px' }}>
           <div className="stat-card">
             <div className="stat-card-header">
               <div>
@@ -198,17 +349,6 @@ function Dashboard() {
           <div className="stat-card info">
             <div className="stat-card-header">
               <div>
-                <div className="stat-label">Valor Planejado</div>
-                <div className="stat-value">{formatCurrency(totalPlanned)}</div>
-                <div className="stat-change">Total estimado</div>
-              </div>
-              <div className="stat-icon info">📋</div>
-            </div>
-          </div>
-
-          <div className="stat-card info">
-            <div className="stat-card-header">
-              <div>
                 <div className="stat-label">Valor Real (Despesas)</div>
                 <div className="stat-value">{formatCurrency(totalExpenses)}</div>
                 <div className="stat-change">Acumulado</div>
@@ -220,79 +360,11 @@ function Dashboard() {
           <div className="stat-card">
             <div className="stat-card-header">
               <div>
-                <div className="stat-label">Variação</div>
-                <div className="stat-value" style={{
-                  color: totalExpenses > totalPlanned ? '#dc3545' : '#28a745',
-                  fontSize: totalPlanned > 0 ? '1.5rem' : '2rem'
-                }}>
-                  {totalPlanned > 0
-                    ? `${((totalExpenses / totalPlanned) * 100).toFixed(1)}%`
-                    : '-'}
-                </div>
-                <div className="stat-change">
-                  {totalPlanned > 0 && totalExpenses > totalPlanned && 'Acima do planejado'}
-                  {totalPlanned > 0 && totalExpenses <= totalPlanned && 'Dentro do planejado'}
-                  {totalPlanned === 0 && 'Sem planejamento'}
-                </div>
-              </div>
-              <div className="stat-icon">📊</div>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-card-header">
-              <div>
                 <div className="stat-label">Custo Médio</div>
                 <div className="stat-value">{formatCurrency(avgExpensePerResource)}</div>
                 <div className="stat-change">Por recurso</div>
               </div>
               <div className="stat-icon">📈</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card" style={{ marginTop: '20px' }}>
-          <div className="card-header">
-            <span>Recursos por Status</span>
-            <span className="card-subtitle">Distribuição atual dos {totalResources} recursos</span>
-          </div>
-          <div style={{ padding: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-              <div className="card" style={{ background: 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)', border: '1px solid #c3e6cb' }}>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '48px', fontWeight: 700, color: '#155724', marginBottom: '8px' }}>
-                    {resourcesAtivos}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#155724', fontWeight: 600 }}>RECURSOS ATIVOS</div>
-                  <div style={{ fontSize: '12px', color: '#155724', marginTop: '4px' }}>
-                    {totalResources > 0 ? `${((resourcesAtivos / totalResources) * 100).toFixed(0)}% do total` : '0%'}
-                  </div>
-                </div>
-              </div>
-
-              <div className="card" style={{ background: 'linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%)', border: '1px solid #ffe69c' }}>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '48px', fontWeight: 700, color: '#856404', marginBottom: '8px' }}>
-                    {resourcesUrgentes}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#856404', fontWeight: 600 }}>RECURSOS URGENTES</div>
-                  <div style={{ fontSize: '12px', color: '#856404', marginTop: '4px' }}>
-                    {totalResources > 0 ? `${((resourcesUrgentes / totalResources) * 100).toFixed(0)}% do total` : '0%'}
-                  </div>
-                </div>
-              </div>
-
-              <div className="card" style={{ background: 'linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%)', border: '1px solid #d6d8db' }}>
-                <div style={{ padding: '20px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '48px', fontWeight: 700, color: '#383d41', marginBottom: '8px' }}>
-                    {resourcesInativos}
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#383d41', fontWeight: 600 }}>RECURSOS INATIVOS</div>
-                  <div style={{ fontSize: '12px', color: '#383d41', marginTop: '4px' }}>
-                    {totalResources > 0 ? `${((resourcesInativos / totalResources) * 100).toFixed(0)}% do total` : '0%'}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
