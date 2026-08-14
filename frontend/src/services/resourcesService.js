@@ -25,7 +25,8 @@ export const resourcesService = {
       const resourceExpenses = expensesRes.documents.filter(e => e.resource_id === r.$id);
       const totalExpenses = resourceExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
       const totalExpensesBrl = resourceExpenses.reduce((sum, e) => {
-        const rate = e.budget_id ? parseFloat(budgetsMap[e.budget_id]?.exchange_rate) || 0 : 0;
+        const ownRate = parseFloat(e.exchange_rate) || 0;
+        const rate = ownRate > 0 ? ownRate : (e.budget_id ? parseFloat(budgetsMap[e.budget_id]?.exchange_rate) || 0 : 0);
         return rate > 0 ? sum + parseFloat(e.amount || 0) * rate : sum;
       }, 0);
 

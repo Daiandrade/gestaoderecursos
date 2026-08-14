@@ -27,7 +27,8 @@ export const expensesService = {
     budgetsRes.documents.forEach(b => { ratesMap[b.$id] = parseFloat(b.exchange_rate) || 0; });
 
     return expensesRes.documents.map(e => {
-      const rate = e.budget_id ? (ratesMap[e.budget_id] || 0) : 0;
+      const ownRate = parseFloat(e.exchange_rate) || 0;
+      const rate = ownRate > 0 ? ownRate : (e.budget_id ? (ratesMap[e.budget_id] || 0) : 0);
       const amountUsd = parseFloat(e.amount || 0);
       return {
         id: e.$id,
@@ -55,7 +56,8 @@ export const expensesService = {
     budgetsRes.documents.forEach(b => { ratesMap[b.$id] = parseFloat(b.exchange_rate) || 0; });
 
     return res.documents.map(e => {
-      const rate = e.budget_id ? (ratesMap[e.budget_id] || 0) : 0;
+      const ownRate = parseFloat(e.exchange_rate) || 0;
+      const rate = ownRate > 0 ? ownRate : (e.budget_id ? (ratesMap[e.budget_id] || 0) : 0);
       const amountUsd = parseFloat(e.amount || 0);
       return {
         id: e.$id,
@@ -89,7 +91,8 @@ export const expensesService = {
       }
       const amountUsd = parseFloat(e.amount || 0);
       monthly[e.month].total += amountUsd;
-      const rate = e.budget_id ? (ratesMap[e.budget_id] || 0) : 0;
+      const ownRate = parseFloat(e.exchange_rate) || 0;
+      const rate = ownRate > 0 ? ownRate : (e.budget_id ? (ratesMap[e.budget_id] || 0) : 0);
       if (rate > 0) monthly[e.month].totalBrl += amountUsd * rate;
       monthly[e.month].count += 1;
     });
@@ -107,6 +110,11 @@ export const expensesService = {
       console.warn('Não foi possível obter o budget do recurso para snapshot:', err);
     }
 
+    const currency = data.currency === 'BRL' ? 'BRL' : 'USD';
+    const rate = parseFloat(data.exchange_rate) || 0;
+    const rawAmount = parseFloat(data.amount) || 0;
+    const amountUsd = currency === 'BRL' ? (rate > 0 ? rawAmount / rate : rawAmount) : rawAmount;
+
     const doc = await databases.createDocument(
       DATABASE_ID,
       COLLECTIONS.EXPENSES,
@@ -117,7 +125,9 @@ export const expensesService = {
         budget_id: budgetIdSnapshot,
         month: parseInt(data.month),
         year: parseInt(data.year),
-        amount: parseFloat(data.amount),
+        amount: amountUsd,
+        currency,
+        exchange_rate: rate,
         description: data.description || '',
         created_by: currentUser?.$id || '',
         created_by_name: currentUser?.name || currentUser?.email || ''
@@ -131,13 +141,20 @@ export const expensesService = {
     // Buscar valores antigos
     const oldDoc = await databases.getDocument(DATABASE_ID, COLLECTIONS.EXPENSES, id);
 
+    const currency = data.currency === 'BRL' ? 'BRL' : 'USD';
+    const rate = parseFloat(data.exchange_rate) || 0;
+    const rawAmount = parseFloat(data.amount) || 0;
+    const amountUsd = currency === 'BRL' ? (rate > 0 ? rawAmount / rate : rawAmount) : rawAmount;
+
     // Atualizar
     const doc = await databases.updateDocument(
       DATABASE_ID,
       COLLECTIONS.EXPENSES,
       id,
       {
-        amount: parseFloat(data.amount),
+        amount: amountUsd,
+        currency,
+        exchange_rate: rate,
         description: data.description || ''
       }
     );
@@ -153,7 +170,7 @@ export const expensesService = {
           record_id: id,
           action: 'update',
           old_values: JSON.stringify({ amount: oldDoc.amount, description: oldDoc.description }),
-          new_values: JSON.stringify({ amount: data.amount, description: data.description }),
+          new_values: JSON.stringify({ amount: amountUsd, description: data.description }),
           changed_by: currentUser?.$id || '',
           changed_by_name: currentUser?.name || currentUser?.email || ''
         }

@@ -273,6 +273,14 @@ async function setupExpensesCollection() {
     databases.createStringAttribute(DATABASE_ID, COL, 'budget_id', 50, false),
     'Attribute: budget_id'
   );
+  await ignoreIfExists(
+    databases.createStringAttribute(DATABASE_ID, COL, 'currency', 3, false),
+    'Attribute: currency'
+  );
+  await ignoreIfExists(
+    databases.createFloatAttribute(DATABASE_ID, COL, 'exchange_rate', false),
+    'Attribute: exchange_rate'
+  );
 
   await waitForAttribute(COL, 'resource_id');
   await waitForAttribute(COL, 'product_id');
@@ -281,6 +289,8 @@ async function setupExpensesCollection() {
   await waitForAttribute(COL, 'amount');
   await waitForAttribute(COL, 'description');
   await waitForAttribute(COL, 'budget_id');
+  await waitForAttribute(COL, 'currency');
+  await waitForAttribute(COL, 'exchange_rate');
 
   await ignoreIfExists(
     databases.createIndex(DATABASE_ID, COL, 'resource_id_index', 'key', ['resource_id'], ['ASC']),

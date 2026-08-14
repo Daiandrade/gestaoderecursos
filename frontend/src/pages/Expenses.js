@@ -27,7 +27,9 @@ function Expenses() {
     product_id: '',
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
+    currency: 'USD',
     amount: '',
+    exchange_rate: '',
     description: ''
   });
 
@@ -152,12 +154,19 @@ function Expenses() {
 
   const handleEdit = (expense) => {
     setEditingExpense(expense);
+    const currency = expense.currency || 'USD';
+    const rate = parseFloat(expense.exchange_rate) || 0;
+    const rawAmount = currency === 'BRL' && rate > 0
+      ? parseFloat(expense.amount) * rate
+      : parseFloat(expense.amount);
     setFormData({
       resource_id: expense.resource_id,
       product_id: expense.product_id,
       month: expense.month,
       year: expense.year,
-      amount: expense.amount,
+      currency,
+      amount: rawAmount,
+      exchange_rate: rate || '',
       description: expense.description || ''
     });
     setShowModal(true);
@@ -196,7 +205,9 @@ function Expenses() {
       product_id: selectedProduct,
       month: new Date().getMonth() + 1,
       year: new Date().getFullYear(),
+      currency: 'USD',
       amount: '',
+      exchange_rate: '',
       description: ''
     });
   };
@@ -640,7 +651,16 @@ function Expenses() {
                     <label>Recurso *</label>
                     <select
                       value={formData.resource_id}
-                      onChange={(e) => setFormData({ ...formData, resource_id: e.target.value })}
+                      onChange={(e) => {
+                        const resourceId = e.target.value;
+                        const resource = filteredResources.find(r => r.id === resourceId);
+                        const budgetRate = resource?.budget?.exchange_rate;
+                        setFormData(prev => ({
+                          ...prev,
+                          resource_id: resourceId,
+                          exchange_rate: prev.exchange_rate || (budgetRate ? String(budgetRate) : prev.exchange_rate)
+                        }));
+                      }}
                       required
                       disabled={!!editingExpense}
                     >
@@ -678,8 +698,37 @@ function Expenses() {
                     </div>
                   </div>
 
+                  <div className="form-row">
+                    <div>
+                      <label>Moeda de Lançamento *</label>
+                      <select
+                        value={formData.currency}
+                        onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                        required
+                      >
+                        <option value="USD">Dólar (US$)</option>
+                        <option value="BRL">Real (R$)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label>Cotação do Dólar (R$) *</label>
+                      <NumericFormat
+                        thousandSeparator="."
+                        decimalSeparator=","
+                        decimalScale={4}
+                        fixedDecimalScale={false}
+                        allowNegative={false}
+                        value={formData.exchange_rate}
+                        onValueChange={(v) => setFormData({ ...formData, exchange_rate: v.value })}
+                        placeholder="0,0000"
+                        required
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label>Valor (US$) *</label>
+                    <label>Valor ({formData.currency === 'BRL' ? 'R$' : 'US$'}) *</label>
                     <NumericFormat
                       thousandSeparator="."
                       decimalSeparator=","
@@ -691,6 +740,13 @@ function Expenses() {
                       placeholder="0,00"
                       required
                     />
+                    {formData.amount && formData.exchange_rate && (
+                      <div className="text-muted" style={{ fontSize: '12px', marginTop: '4px' }}>
+                        {formData.currency === 'BRL'
+                          ? `≈ ${formatUsd((parseFloat(formData.amount) || 0) / (parseFloat(formData.exchange_rate) || 1))}`
+                          : `≈ ${formatCurrency((parseFloat(formData.amount) || 0) * (parseFloat(formData.exchange_rate) || 0))}`}
+                      </div>
+                    )}
                   </div>
 
                   <div>
