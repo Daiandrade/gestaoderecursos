@@ -236,17 +236,6 @@ function Budget() {
     }, {})
   ).sort((a, b) => (a.year - b.year) || (a.month - b.month));
 
-  const budgetMonthlyBreakdown = displayedBudgets.map(b => {
-    const exchangeRate = parseFloat(b.exchange_rate) || 0;
-    const monthly = parseMonthlyValues(b)
-      .map(m => {
-        const amountUsd = parseFloat(m.amount_usd) || 0;
-        return { month: m.month, year: m.year, amount_usd: amountUsd, amount_brl: amountUsd * exchangeRate };
-      })
-      .sort((a, b2) => (a.year - b2.year) || (a.month - b2.month));
-    return { budget: b, monthly };
-  });
-
   const monthYearLabel = (b) => {
     if (!b.month) return '-';
     if (b.month_end && b.year_end && (b.month_end !== b.month || b.year_end !== b.year)) {
@@ -305,23 +294,11 @@ function Budget() {
         ])
       },
       {
-        heading: 'Valor por Mês, por Budget Aprovado',
-        columns: ['Budget', 'Solicitado por', 'Mês/Ano', 'Valor USD', 'Valor BRL'],
-        rows: budgetMonthlyBreakdown.flatMap(({ budget, monthly }) =>
-          monthly.map(m => [
-            monthYearLabel(budget),
-            budget.requested_by,
-            `${MONTHS[m.month - 1]}/${m.year}`,
-            formatUsd(m.amount_usd),
-            formatCurrency(m.amount_brl)
-          ])
-        )
-      },
-      {
         heading: 'Budgets',
-        columns: ['Mês/Ano', 'Valor USD', 'Gasto USD', 'Cotação', 'Valor BRL', 'Gasto BRL', '% Consumido', 'Status', 'Recursos Aprovados', 'Solicitado por', 'Aprovado por', 'Data Aprovação'],
+        columns: ['Mês/Ano', 'Descrição', 'Valor USD', 'Gasto USD', 'Cotação', 'Valor BRL', 'Gasto BRL', '% Consumido', 'Status', 'Recursos Aprovados', 'Solicitado por', 'Aprovado por', 'Data Aprovação'],
         rows: displayedBudgets.map(b => [
           monthYearLabel(b),
+          b.description || '-',
           formatUsd(parseFloat(b.amount_usd)),
           formatUsd(b.spent_usd || 0),
           parseFloat(b.exchange_rate).toFixed(4),
@@ -533,50 +510,6 @@ function Budget() {
 
         <div className="card" style={{ marginTop: '16px' }}>
           <div className="card-header">
-            <span>Valor por Mês, por Budget Aprovado</span>
-            <span className="card-subtitle">{budgetMonthlyBreakdown.length} budget(s)</span>
-          </div>
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Budget</th>
-                  <th>Mês/Ano</th>
-                  <th>Valor USD</th>
-                  <th>Valor BRL</th>
-                </tr>
-              </thead>
-              <tbody>
-                {budgetMonthlyBreakdown.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" className="text-center text-muted" style={{ padding: '40px' }}>
-                      Nenhum budget registrado
-                    </td>
-                  </tr>
-                ) : (
-                  budgetMonthlyBreakdown.map(({ budget, monthly }) => (
-                    monthly.map((m, idx) => (
-                      <tr key={`${budget.id}-${m.year}-${m.month}`}>
-                        {idx === 0 ? (
-                          <td rowSpan={monthly.length} className="font-semibold" style={{ verticalAlign: 'top' }}>
-                            {monthYearLabel(budget)}
-                            <div className="text-muted" style={{ fontSize: '12px' }}>{budget.requested_by}</div>
-                          </td>
-                        ) : null}
-                        <td className="text-muted" style={{ fontSize: '13px' }}>{MONTHS[m.month - 1]}/{m.year}</td>
-                        <td>{formatUsd(m.amount_usd)}</td>
-                        <td className="text-primary">{formatCurrency(m.amount_brl)}</td>
-                      </tr>
-                    ))
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="card" style={{ marginTop: '16px' }}>
-          <div className="card-header">
             <span>Budgets Aprovados</span>
             <span className="card-subtitle">{displayedBudgets.length} lançamento(s)</span>
           </div>
@@ -585,6 +518,7 @@ function Budget() {
               <thead>
                 <tr>
                   <th>Mês/Ano</th>
+                  <th>Descrição</th>
                   <th>Valor USD</th>
                   <th>Cotação</th>
                   <th>Valor BRL</th>
@@ -602,7 +536,7 @@ function Budget() {
               <tbody>
                 {displayedBudgets.length === 0 ? (
                   <tr>
-                    <td colSpan="13" className="text-center text-muted" style={{ padding: '40px' }}>
+                    <td colSpan="14" className="text-center text-muted" style={{ padding: '40px' }}>
                       Nenhum budget registrado
                     </td>
                   </tr>
@@ -611,6 +545,13 @@ function Budget() {
                     <tr key={budget.id}>
                       <td className="text-muted" style={{ fontSize: '13px' }}>
                         {monthYearLabel(budget)}
+                      </td>
+                      <td
+                        onClick={() => setExpensesBudgetId(budget.id)}
+                        style={{ cursor: 'pointer' }}
+                        title="Ver despesas deste budget"
+                      >
+                        {budget.description || '-'}
                       </td>
                       <td className="font-semibold">{formatUsd(parseFloat(budget.amount_usd))}</td>
                       <td>{parseFloat(budget.exchange_rate).toFixed(4)}</td>
