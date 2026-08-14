@@ -1,36 +1,62 @@
-/* Thomson Reuters - Design System */
+/* Thomson Reuters - Design System (brand.thomsonreuters.com) */
+@font-face {
+  font-family: 'Clario';
+  src: url('./fonts/Clario-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Clario';
+  src: url('./fonts/Clario-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Clario';
+  src: url('./fonts/Clario-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* Cores Primárias TR */
-  --tr-orange: #FA6400;
-  --tr-orange-light: #FF8533;
-  --tr-orange-dark: #D45400;
+  --tr-orange: #D64000;
+  --tr-orange-light: #E6764A;
+  --tr-orange-dark: #A83300;
+  --tr-racing-green: #123015;
+  --tr-racing-green-light: #1B4520;
 
   /* Cores Neutras */
-  --tr-charcoal: #1A1B27;
-  --tr-dark-blue: #2C2D3F;
-  --tr-medium-gray: #6E6E6E;
+  --tr-charcoal: #212223;
+  --tr-dark-blue: #123015;
+  --tr-medium-gray: #7A7A7A;
   --tr-light-gray: #E5E5E5;
   --tr-bg-gray: #F5F5F7;
   --tr-white: #FFFFFF;
 
   /* Cores Funcionais */
-  --tr-success: #00875A;
-  --tr-success-light: #E3F5EC;
+  --tr-success: #387C2B;
+  --tr-success-light: #EAF3E8;
   --tr-warning: #F5A623;
   --tr-warning-light: #FFF4E0;
-  --tr-danger: #DE350B;
-  --tr-danger-light: #FFEBE6;
+  --tr-danger: #DC0A0A;
+  --tr-danger-light: #FDEAEA;
   --tr-info: #0052CC;
   --tr-info-light: #DEEBFF;
 
   /* Sombras */
-  --shadow-sm: 0 1px 2px rgba(26, 27, 39, 0.05);
-  --shadow-md: 0 2px 8px rgba(26, 27, 39, 0.08);
-  --shadow-lg: 0 4px 16px rgba(26, 27, 39, 0.12);
-  --shadow-xl: 0 8px 32px rgba(26, 27, 39, 0.16);
+  --shadow-sm: 0 1px 2px rgba(33, 34, 35, 0.05);
+  --shadow-md: 0 2px 8px rgba(33, 34, 35, 0.08);
+  --shadow-lg: 0 4px 16px rgba(33, 34, 35, 0.12);
+  --shadow-xl: 0 8px 32px rgba(33, 34, 35, 0.16);
 
   /* Tipografia */
-  --font-family: 'Knowledge', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+  --font-family: 'Clario', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
 
   /* Espaçamentos */
   --radius-sm: 4px;
@@ -192,7 +218,7 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--tr-orange);
-  box-shadow: 0 0 0 3px rgba(250, 100, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(214, 64, 0, 0.1);
 }
 
 input:disabled, select:disabled, textarea:disabled {

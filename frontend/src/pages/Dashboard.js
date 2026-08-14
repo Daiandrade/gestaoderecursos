@@ -9,7 +9,7 @@ import {
   PieChart, Pie, Cell
 } from 'recharts';
 
-const COLORS = ['#FA6400', '#1A1B27', '#0052CC', '#00875A'];
+const COLORS = ['#D64000', '#123015', '#0052CC', '#387C2B'];
 
 function Dashboard() {
   const [products, setProducts] = useState([]);
@@ -381,7 +381,7 @@ function Dashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6E6E6E' }} />
                 <YAxis tick={{ fontSize: 12, fill: '#6E6E6E' }} />
                 <Tooltip />
-                <Bar dataKey="recursos" fill="#FA6400" name="Recursos" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="recursos" fill="#D64000" name="Recursos" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

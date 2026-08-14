@@ -42,7 +42,7 @@ export function exportPDF({ title, subtitle, sections, filename }) {
       head: [section.columns],
       body: section.rows,
       styles: { fontSize: 9 },
-      headStyles: { fillColor: [250, 100, 0], textColor: 255 },
+      headStyles: { fillColor: [214, 64, 0], textColor: 255 },
       margin: { left: 14, right: 14 },
     });
 

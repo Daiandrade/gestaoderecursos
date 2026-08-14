@@ -5,7 +5,7 @@
  *   node create-admin.js email@thomsonreuters.com Senha123 "Seu Nome"
  */
 require('dotenv').config();
-const { Client, Users, Databases, ID } = require('node-appwrite');
+const { Client, Users, Databases, Teams, ID } = require('node-appwrite');
 
 const [, , email, password, name] = process.argv;
 
@@ -27,7 +27,9 @@ const client = new Client()
 
 const users = new Users(client);
 const databases = new Databases(client);
+const teams = new Teams(client);
 const DATABASE_ID = process.env.DATABASE_ID || 'gestao_recursos';
+const ADMINS_TEAM_ID = 'admins';
 
 async function main() {
   console.log('\n👤 Criando usuário admin...\n');
@@ -72,6 +74,20 @@ async function main() {
   } catch (err) {
     if (err.code === 409 || err.message?.includes('already exists')) {
       console.log(`· Perfil já existia para este usuário`);
+    } else {
+      throw err;
+    }
+  }
+
+  // 3. Adicionar ao Team "admins" (permissão de escrita em user_profiles no Appwrite)
+  try {
+    await teams.createMembership(ADMINS_TEAM_ID, [], undefined, userId);
+    console.log(`✓ Adicionado ao Team "admins"`);
+  } catch (err) {
+    if (err.code === 409) {
+      console.log(`· Já era membro do Team "admins"`);
+    } else if (err.code === 404) {
+      console.log(`· Team "admins" ainda não existe (rode setup/fix-permissions-v2.js primeiro)`);
     } else {
       throw err;
     }

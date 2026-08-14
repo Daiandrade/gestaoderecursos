@@ -537,15 +537,15 @@ function Expenses() {
             <AreaChart data={monthlyData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorValor" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#FA6400" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="#FA6400" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#D64000" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="#D64000" stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6E6E6E' }} />
               <YAxis tick={{ fontSize: 12, fill: '#6E6E6E' }} />
               <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Area type="monotone" dataKey="valor" stroke="#FA6400" strokeWidth={3} fillOpacity={1} fill="url(#colorValor)" name="Despesas" />
+              <Area type="monotone" dataKey="valor" stroke="#D64000" strokeWidth={3} fillOpacity={1} fill="url(#colorValor)" name="Despesas" />
             </AreaChart>
           </ResponsiveContainer>
         </div>

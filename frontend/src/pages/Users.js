@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { usersService } from '../services/usersService';
 import { productsService } from '../services/productsService';
+import { ADDONS } from '../config/addons';
 
 function Users() {
   const [users, setUsers] = useState([]);
@@ -13,7 +14,8 @@ function Users() {
     username: '',
     email: '',
     role: 'product_manager',
-    product_ids: []
+    product_ids: [],
+    addon_ids: []
   });
 
   useEffect(() => {
@@ -39,10 +41,11 @@ function Users() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Converter array de product_ids para string separada por vírgula
+      // Converter arrays de ids para strings separadas por vírgula
       const dataToSave = {
         ...formData,
-        product_id: formData.product_ids.join(',')
+        product_id: formData.product_ids.join(','),
+        addon_ids: formData.addon_ids.join(',')
       };
       delete dataToSave.product_ids;
 
@@ -67,7 +70,8 @@ function Users() {
       username: user.username,
       email: user.email,
       role: user.role,
-      product_ids: user.product_id ? user.product_id.split(',').filter(id => id.trim()) : []
+      product_ids: user.product_id ? user.product_id.split(',').filter(id => id.trim()) : [],
+      addon_ids: user.addon_ids || []
     });
     setShowModal(true);
   };
@@ -94,7 +98,8 @@ function Users() {
       username: '',
       email: '',
       role: 'product_manager',
-      product_ids: []
+      product_ids: [],
+      addon_ids: []
     });
   };
 
@@ -130,7 +135,7 @@ function Users() {
                 <li>Primeiro, crie a conta no <strong>Appwrite Console</strong> em Auth → Users → Create user</li>
                 <li>Copie o <strong>User ID</strong> gerado</li>
                 <li>Aqui, clique em <strong>+ Novo Perfil</strong> e cole o User ID + dados do usuário</li>
-                <li>Atribua o role (admin ou gerente) e o produto (se gerente)</li>
+                <li>Atribua o perfil de acesso, os addons e (se aplicável) os produtos que ele poderá ver</li>
               </ol>
             </div>
           </div>
@@ -162,7 +167,7 @@ function Users() {
           <div className="stat-card success">
             <div className="stat-card-header">
               <div>
-                <div className="stat-label">Gerentes</div>
+                <div className="stat-label">Usuários</div>
                 <div className="stat-value">{managerCount}</div>
                 <div className="stat-change">Acesso restrito</div>
               </div>
@@ -184,6 +189,7 @@ function Users() {
                   <th>Email</th>
                   <th>Perfil</th>
                   <th>Produto</th>
+                  <th>Addons</th>
                   <th>Criado em</th>
                   <th style={{ width: '180px' }}>Ações</th>
                 </tr>
@@ -202,7 +208,7 @@ function Users() {
                     <td className="text-muted">{user.email}</td>
                     <td>
                       <span className={`badge ${user.role === 'admin' ? 'badge-danger' : 'badge-info'}`}>
-                        {user.role === 'admin' ? 'Administrador' : 'Gerente de Produto'}
+                        {user.role === 'admin' ? 'Administrador' : 'Usuário'}
                       </span>
                     </td>
                     <td>
@@ -214,6 +220,24 @@ function Users() {
                         </div>
                       ) : (
                         <span className="text-muted">Todos</span>
+                      )}
+                    </td>
+                    <td>
+                      {user.role === 'admin' ? (
+                        <span className="text-muted">Todos</span>
+                      ) : user.addon_ids && user.addon_ids.length > 0 ? (
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {user.addon_ids.map((addonId) => {
+                            const addon = ADDONS.find(a => a.id === addonId);
+                            return (
+                              <span key={addonId} className="badge badge-info">
+                                {addon ? addon.name : addonId}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className="text-muted">Nenhum</span>
                       )}
                     </td>
                     <td className="text-muted">
@@ -280,70 +304,114 @@ function Users() {
                     </div>
                   </div>
 
-                  <div className="form-row">
+                  <div>
+                    <label>Perfil de Acesso *</label>
+                    <select
+                      value={formData.role}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      required
+                    >
+                      <option value="product_manager">Usuário</option>
+                      <option value="admin">Administrador</option>
+                    </select>
+                    <div className="form-hint">
+                      {formData.role === 'admin'
+                        ? 'Acesso total ao Hub, a todos os addons e a todos os produtos'
+                        : 'Acesso restrito aos addons e produtos selecionados abaixo'}
+                    </div>
+                  </div>
+
+                  {formData.role === 'product_manager' && (
                     <div>
-                      <label>Perfil de Acesso *</label>
-                      <select
-                        value={formData.role}
-                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                        required
-                      >
-                        <option value="product_manager">Gerente de Produto</option>
-                        <option value="admin">Administrador</option>
-                      </select>
+                      <label>Acesso a Addons * (selecione um ou mais)</label>
+                      <div style={{
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        padding: '12px',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        backgroundColor: '#f9f9f9'
+                      }}>
+                        {ADDONS.map(addon => (
+                          <label
+                            key={addon.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '8px',
+                              cursor: 'pointer',
+                              borderRadius: '4px',
+                              transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData.addon_ids.includes(addon.id)}
+                              onChange={(e) => {
+                                const newIds = e.target.checked
+                                  ? [...formData.addon_ids, addon.id]
+                                  : formData.addon_ids.filter(id => id !== addon.id);
+                                setFormData({ ...formData, addon_ids: newIds });
+                              }}
+                              style={{ marginRight: '8px' }}
+                            />
+                            {addon.name}
+                          </label>
+                        ))}
+                      </div>
                       <div className="form-hint">
-                        {formData.role === 'admin'
-                          ? 'Acesso total a todos os produtos'
-                          : 'Acesso restrito ao produto selecionado'}
+                        Selecione quais addons do Hub este usuário poderá abrir
                       </div>
                     </div>
+                  )}
 
-                    {formData.role === 'product_manager' && (
-                      <div>
-                        <label>Produtos Responsável * (selecione um ou mais)</label>
-                        <div style={{
-                          border: '1px solid #ddd',
-                          borderRadius: '8px',
-                          padding: '12px',
-                          maxHeight: '200px',
-                          overflowY: 'auto',
-                          backgroundColor: '#f9f9f9'
-                        }}>
-                          {products.map(p => (
-                            <label
-                              key={p.id}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                padding: '8px',
-                                cursor: 'pointer',
-                                borderRadius: '4px',
-                                transition: 'background 0.2s'
+                  {formData.role === 'product_manager' && formData.addon_ids.includes('budget') && (
+                    <div style={{ borderLeft: '3px solid var(--tr-racing-green)', paddingLeft: '16px' }}>
+                      <label>Gestor de Budget — Produtos Responsável * (selecione um ou mais)</label>
+                      <div style={{
+                        border: '1px solid #ddd',
+                        borderRadius: '8px',
+                        padding: '12px',
+                        maxHeight: '200px',
+                        overflowY: 'auto',
+                        backgroundColor: '#f9f9f9'
+                      }}>
+                        {products.map(p => (
+                          <label
+                            key={p.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '8px',
+                              cursor: 'pointer',
+                              borderRadius: '4px',
+                              transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData.product_ids.includes(p.id)}
+                              onChange={(e) => {
+                                const newIds = e.target.checked
+                                  ? [...formData.product_ids, p.id]
+                                  : formData.product_ids.filter(id => id !== p.id);
+                                setFormData({ ...formData, product_ids: newIds });
                               }}
-                              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-                              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={formData.product_ids.includes(p.id)}
-                                onChange={(e) => {
-                                  const newIds = e.target.checked
-                                    ? [...formData.product_ids, p.id]
-                                    : formData.product_ids.filter(id => id !== p.id);
-                                  setFormData({ ...formData, product_ids: newIds });
-                                }}
-                                style={{ marginRight: '8px' }}
-                              />
-                              {p.name}
-                            </label>
-                          ))}
-                        </div>
-                        <div className="form-hint">
-                          Selecione todos os produtos que este gerente poderá acessar
-                        </div>
+                              style={{ marginRight: '8px' }}
+                            />
+                            {p.name}
+                          </label>
+                        ))}
                       </div>
-                    )}
-                  </div>
+                      <div className="form-hint">
+                        Selecione todos os produtos que este usuário poderá acessar dentro do Gestor de Budget
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="modal-footer">

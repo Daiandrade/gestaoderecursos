@@ -23,7 +23,7 @@
   right: -100px;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(250, 100, 0, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(214, 64, 0, 0.15) 0%, transparent 70%);
   border-radius: 50%;
 }
 
@@ -34,7 +34,7 @@
   left: -150px;
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(250, 100, 0, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(214, 64, 0, 0.08) 0%, transparent 70%);
   border-radius: 50%;
 }
 
@@ -45,33 +45,36 @@
 }
 
 .login-logo {
-  width: 64px;
-  height: 64px;
-  background: var(--tr-orange);
-  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 48px;
+}
+
+.login-logo-mark {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--tr-orange) 0%, var(--tr-orange-light) 100%);
+  color: var(--tr-white);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 28px;
-  color: var(--tr-white);
-  margin-bottom: 32px;
+  box-shadow: 0 8px 24px rgba(214, 64, 0, 0.35);
 }
 
-.login-brand-title {
-  font-size: 42px;
+.login-logo-mark svg {
+  width: 28px;
+  height: 28px;
+}
+
+.login-logo-name {
+  font-size: 26px;
   font-weight: 700;
   color: var(--tr-white);
-  margin-bottom: 16px;
-  line-height: 1.1;
-  letter-spacing: -1px;
-}
-
-.login-brand-subtitle {
-  font-size: 18px;
-  color: rgba(255, 255, 255, 0.7);
-  line-height: 1.6;
-  margin-bottom: 40px;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 
 .login-features {
@@ -93,8 +96,8 @@
 .login-feature-icon {
   width: 32px;
   height: 32px;
-  background: rgba(250, 100, 0, 0.15);
-  border: 1px solid rgba(250, 100, 0, 0.3);
+  background: rgba(214, 64, 0, 0.15);
+  border: 1px solid rgba(214, 64, 0, 0.3);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -181,7 +184,7 @@
     min-height: 300px;
   }
 
-  .login-brand-title {
-    font-size: 32px;
+  .login-logo-name {
+    font-size: 21px;
   }
 }

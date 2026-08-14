@@ -1,15 +1,27 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
+import Hub from './pages/Hub';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Resources from './pages/Resources';
 import Budget from './pages/Budget';
 import Expenses from './pages/Expenses';
 import Users from './pages/Users';
+import Consultorias from './pages/Consultorias';
+import ConsultoriaDetail from './pages/ConsultoriaDetail';
+import EntregaAgendas from './pages/EntregaAgendas';
+import CockpitProdutos from './pages/CockpitProdutos';
+import Eventos from './pages/Eventos';
+import Playbook from './pages/Playbook';
+import IaBoasPraticas from './pages/IaBoasPraticas';
 import Navbar from './components/Navbar';
+import AdminNavbar from './components/AdminNavbar';
 import './App.css';
+
+const BUDGET_ADDON_PATHS = ['/dashboard', '/products', '/resources', '/budget', '/expenses'];
+const FULLSCREEN_PATHS = ['/cockpit-produtos', '/playbook'];
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -35,52 +47,79 @@ const AdminRoute = ({ children }) => {
   return isAdmin() ? children : <Navigate to="/dashboard" />;
 };
 
+const AddonRoute = ({ addonId, children }) => {
+  const { user, loading, canAccessAddon } = useAuth();
+
+  if (loading) {
+    return <div className="loading">Carregando...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  return canAccessAddon(addonId) ? children : <Navigate to="/" />;
+};
+
 function AppContent() {
   const { user } = useAuth();
+  const location = useLocation();
+  const showBudgetNavbar = user && BUDGET_ADDON_PATHS.includes(location.pathname);
+  const isFullscreenPath = FULLSCREEN_PATHS.includes(location.pathname);
+  const showAdminNavbar = user && location.pathname !== '/' && !showBudgetNavbar && !isFullscreenPath;
 
   return (
-    <Router>
-      {user && <Navbar />}
+    <>
+      {showBudgetNavbar && <Navbar />}
+      {showAdminNavbar && <AdminNavbar />}
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
-          path="/dashboard"
+          path="/"
           element={
             <PrivateRoute>
-              <Dashboard />
+              <Hub />
             </PrivateRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <AddonRoute addonId="budget">
+              <Dashboard />
+            </AddonRoute>
           }
         />
         <Route
           path="/products"
           element={
-            <PrivateRoute>
+            <AddonRoute addonId="budget">
               <Products />
-            </PrivateRoute>
+            </AddonRoute>
           }
         />
         <Route
           path="/resources"
           element={
-            <PrivateRoute>
+            <AddonRoute addonId="budget">
               <Resources />
-            </PrivateRoute>
+            </AddonRoute>
           }
         />
         <Route
           path="/budget"
           element={
-            <PrivateRoute>
+            <AddonRoute addonId="budget">
               <Budget />
-            </PrivateRoute>
+            </AddonRoute>
           }
         />
         <Route
           path="/expenses"
           element={
-            <PrivateRoute>
+            <AddonRoute addonId="budget">
               <Expenses />
-            </PrivateRoute>
+            </AddonRoute>
           }
         />
         <Route
@@ -91,16 +130,73 @@ function AppContent() {
             </AdminRoute>
           }
         />
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+        <Route
+          path="/consultorias"
+          element={
+            <AddonRoute addonId="consultorias">
+              <Consultorias />
+            </AddonRoute>
+          }
+        />
+        <Route
+          path="/consultorias/:consultoriaId"
+          element={
+            <AddonRoute addonId="consultorias">
+              <ConsultoriaDetail />
+            </AddonRoute>
+          }
+        />
+        <Route
+          path="/entregas/:entregaId"
+          element={
+            <AddonRoute addonId="consultorias">
+              <EntregaAgendas />
+            </AddonRoute>
+          }
+        />
+        <Route
+          path="/cockpit-produtos"
+          element={
+            <AddonRoute addonId="cockpit-produtos">
+              <CockpitProdutos />
+            </AddonRoute>
+          }
+        />
+        <Route
+          path="/eventos"
+          element={
+            <AddonRoute addonId="eventos">
+              <Eventos />
+            </AddonRoute>
+          }
+        />
+        <Route
+          path="/playbook"
+          element={
+            <AddonRoute addonId="playbook">
+              <Playbook />
+            </AddonRoute>
+          }
+        />
+        <Route
+          path="/ia-boas-praticas"
+          element={
+            <AddonRoute addonId="ia-boas-praticas">
+              <IaBoasPraticas />
+            </AddonRoute>
+          }
+        />
       </Routes>
-    </Router>
+    </>
   );
 }
 
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <Router>
+        <AppContent />
+      </Router>
     </AuthProvider>
   );
 }

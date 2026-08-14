@@ -23,7 +23,7 @@ function Login() {
         setError('Sua conta não tem perfil cadastrado. Contate o administrador.');
         return;
       }
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Erro ao fazer login');
     } finally {
@@ -35,12 +35,20 @@ function Login() {
     <div className="login-container">
       <div className="login-left">
         <div className="login-brand">
-          <div className="login-logo">TR</div>
-          <h1 className="login-brand-title">Gestão de Recursos de Produtos</h1>
-          <p className="login-brand-subtitle">
-            Sistema corporativo para organização de recursos, gestão de despesas e
-            acompanhamento de produtos da Thomson Reuters.
-          </p>
+          <div className="login-logo">
+            <div className="login-logo-mark">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M4 11.5 12 4l8 7.5M6 9.5V20h5v-6h2v6h5V9.5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <span className="login-logo-name">Casa de Produtos Tax</span>
+          </div>
 
           <div className="login-features">
             <div className="login-feature">

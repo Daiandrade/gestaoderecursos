@@ -19,12 +19,14 @@ export const usersService = {
       // Suportar múltiplos produtos separados por vírgula
       const productIds = p.product_id ? p.product_id.split(',').filter(id => id.trim()) : [];
       const productNames = productIds.map(id => productsMap[id]).filter(Boolean);
+      const addonIds = p.addon_ids ? p.addon_ids.split(',').filter(id => id.trim()) : [];
 
       return {
         id: p.$id,
         ...p,
         product_names: productNames,
         product_name: productNames.join(', ') || null, // Retrocompatibilidade
+        addon_ids: addonIds,
         created_at: p.$createdAt
       };
     });
@@ -41,7 +43,8 @@ export const usersService = {
         username: data.username,
         email: data.email,
         role: data.role,
-        product_id: data.role === 'admin' ? null : data.product_id
+        product_id: data.role === 'admin' ? null : data.product_id,
+        addon_ids: data.role === 'admin' ? null : data.addon_ids
       }
     );
     return { id: doc.$id, ...doc };
@@ -56,7 +59,8 @@ export const usersService = {
         username: data.username,
         email: data.email,
         role: data.role,
-        product_id: data.role === 'admin' ? null : data.product_id
+        product_id: data.role === 'admin' ? null : data.product_id,
+        addon_ids: data.role === 'admin' ? null : data.addon_ids
       }
     );
     return { id: doc.$id, ...doc };
