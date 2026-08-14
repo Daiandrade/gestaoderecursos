@@ -103,7 +103,6 @@ function Budget() {
       setShowModal(false);
       setEditingBudget(null);
       resetForm();
-      loadBudgets();
     } catch (error) {
       alert(error.message || 'Erro ao salvar budget');
     }
@@ -136,7 +135,6 @@ function Budget() {
       }
       if (!window.confirm(msg)) return;
       await budgetsService.delete(id);
-      loadBudgets();
     } catch (error) {
       alert(error.message || 'Erro ao deletar budget');
     }
