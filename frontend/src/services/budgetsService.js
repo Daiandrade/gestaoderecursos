@@ -15,34 +15,64 @@ export const budgetsService = {
     }));
   },
 
-  // Listar budgets já enriquecidos com gasto real (via despesas vinculadas) e status de alerta
+  // Listar budgets já enriquecidos com gasto real (via despesas vinculadas), status de alerta
+  // e o detalhamento das despesas que compõem o gasto (para exibir ao clicar na barra de progresso)
   async getAllWithSpending() {
-    const [budgetsRes, expensesRes] = await Promise.all([
+    const [budgetsRes, expensesRes, resourcesRes] = await Promise.all([
       databases.listDocuments(
         DATABASE_ID,
         COLLECTIONS.BUDGETS,
         [Query.orderDesc('period_start'), Query.limit(500)]
       ),
-      databases.listDocuments(DATABASE_ID, COLLECTIONS.EXPENSES, [Query.limit(2000)])
+      databases.listDocuments(DATABASE_ID, COLLECTIONS.EXPENSES, [Query.limit(2000)]),
+      databases.listDocuments(DATABASE_ID, COLLECTIONS.RESOURCES, [Query.limit(500)])
     ]);
 
-    const spentBrlByBudget = {};
+    const resourcesMap = {};
+    resourcesRes.documents.forEach(r => { resourcesMap[r.$id] = r.name; });
+
+    const expensesByBudget = {};
     expensesRes.documents.forEach(e => {
       if (!e.budget_id) return;
-      spentBrlByBudget[e.budget_id] = (spentBrlByBudget[e.budget_id] || 0) + parseFloat(e.amount || 0);
+      if (!expensesByBudget[e.budget_id]) expensesByBudget[e.budget_id] = [];
+      expensesByBudget[e.budget_id].push(e);
     });
 
     return budgetsRes.documents.map(b => {
-      const spentBrl = spentBrlByBudget[b.$id] || 0;
-      const exchangeRate = parseFloat(b.exchange_rate) || 0;
+      const budgetRate = parseFloat(b.exchange_rate) || 0;
+      const linkedExpenses = expensesByBudget[b.$id] || [];
+
+      let spentUsd = 0;
+      let spentBrl = 0;
+      const expenses = linkedExpenses
+        .map(e => {
+          const amountUsd = parseFloat(e.amount || 0);
+          const ownRate = parseFloat(e.exchange_rate) || 0;
+          const rate = ownRate > 0 ? ownRate : budgetRate;
+          const amountBrl = rate > 0 ? amountUsd * rate : null;
+          spentUsd += amountUsd;
+          if (amountBrl !== null) spentBrl += amountBrl;
+          return {
+            id: e.$id,
+            resource_id: e.resource_id,
+            resource_name: resourcesMap[e.resource_id] || 'Desconhecido',
+            month: e.month,
+            year: e.year,
+            amount_usd: amountUsd,
+            amount_brl: amountBrl,
+            exchange_rate: rate,
+            description: e.description || ''
+          };
+        })
+        .sort((a, b2) => (b2.year - a.year) || (b2.month - a.month));
+
       const amountUsd = parseFloat(b.amount_usd) || 0;
-      const spentUsd = exchangeRate > 0 ? spentBrl / exchangeRate : 0;
       const remainingUsd = amountUsd - spentUsd;
       const percentUsed = amountUsd > 0 ? (spentUsd / amountUsd) * 100 : 0;
 
       let statusLevel = 'ok';
       if (amountUsd <= 0) {
-        statusLevel = spentBrl > 0 ? 'critical' : 'unknown';
+        statusLevel = spentUsd > 0 ? 'critical' : 'unknown';
       } else if (percentUsed >= 100) {
         statusLevel = 'critical';
       } else if (percentUsed >= 80) {
@@ -56,7 +86,8 @@ export const budgetsService = {
         spent_usd: spentUsd,
         remaining_usd: remainingUsd,
         percent_used: percentUsed,
-        status_level: statusLevel
+        status_level: statusLevel,
+        expenses
       };
     });
   },

@@ -56,6 +56,7 @@ function Budget() {
   const [editingBudget, setEditingBudget] = useState(null);
   const [viewMode, setViewMode] = useState('mensal');
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [expensesBudgetId, setExpensesBudgetId] = useState(null);
   const [formData, setFormData] = useState({
     description: '',
     requested_by: '',
@@ -275,6 +276,8 @@ function Budget() {
     const s = map[statusLevel] || map.unknown;
     return <span className={`badge ${s.class}`}>{s.label}</span>;
   };
+
+  const expensesBudget = budgets.find(b => b.id === expensesBudgetId) || null;
 
   const previewTotalUsd = formData.monthly_values.reduce((sum, m) => sum + (parseFloat(m.amount_usd) || 0), 0);
   const previewBrl = previewTotalUsd * (parseFloat(formData.exchange_rate) || 0);
@@ -615,7 +618,12 @@ function Budget() {
                       <td className="font-semibold">{formatUsd(budget.spent_usd || 0)}</td>
                       <td>{formatUsd(budget.remaining_usd || 0)}</td>
                       <td>
-                        <div className="budget-progress">
+                        <div
+                          className="budget-progress"
+                          onClick={() => setExpensesBudgetId(budget.id)}
+                          style={{ cursor: 'pointer' }}
+                          title="Ver despesas deste budget"
+                        >
                           <div className="budget-progress-track">
                             <div
                               className={`budget-progress-fill ${
@@ -644,6 +652,86 @@ function Budget() {
             </table>
           </div>
         </div>
+
+        {expensesBudget && (
+          <div className="modal-overlay" onClick={() => setExpensesBudgetId(null)}>
+            <div className="modal modal-large" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Despesas do Budget - {monthYearLabel(expensesBudget)}</h2>
+                <button className="modal-close" onClick={() => setExpensesBudgetId(null)}>×</button>
+              </div>
+
+              <div className="modal-body">
+                <div className="stats-grid">
+                  <div className="stat-card info">
+                    <div className="stat-card-header">
+                      <div>
+                        <div className="stat-label">Aprovado</div>
+                        <div className="stat-value">{formatUsd(parseFloat(expensesBudget.amount_usd))}</div>
+                        <div className="stat-change">{formatCurrency(parseFloat(expensesBudget.amount_brl))}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="stat-card warning">
+                    <div className="stat-card-header">
+                      <div>
+                        <div className="stat-label">Gasto</div>
+                        <div className="stat-value">{formatUsd(expensesBudget.spent_usd || 0)}</div>
+                        <div className="stat-change">{formatCurrency(expensesBudget.spent_brl || 0)}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="stat-card success">
+                    <div className="stat-card-header">
+                      <div>
+                        <div className="stat-label">Restante</div>
+                        <div className="stat-value">{formatUsd(expensesBudget.remaining_usd || 0)}</div>
+                        <div className="stat-change">{(expensesBudget.percent_used || 0).toFixed(1)}% consumido</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="table-wrapper" style={{ marginTop: '16px' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Mês/Ano</th>
+                        <th>Recurso</th>
+                        <th>Descrição</th>
+                        <th>Valor (US$)</th>
+                        <th>Valor (R$)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(expensesBudget.expenses || []).length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="text-center text-muted" style={{ padding: '40px' }}>
+                            Nenhuma despesa lançada neste budget ainda
+                          </td>
+                        </tr>
+                      ) : (
+                        expensesBudget.expenses.map(e => (
+                          <tr key={e.id}>
+                            <td className="text-muted" style={{ fontSize: '13px' }}>{MONTHS[e.month - 1]}/{e.year}</td>
+                            <td>{e.resource_name}</td>
+                            <td className="text-muted" style={{ fontSize: '13px' }}>{e.description || '-'}</td>
+                            <td className="font-semibold">{formatUsd(e.amount_usd)}</td>
+                            <td className="font-semibold text-primary">{e.amount_brl !== null ? formatCurrency(e.amount_brl) : '-'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" onClick={() => setExpensesBudgetId(null)} className="btn-secondary">Fechar</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {showModal && (
           <div className="modal-overlay" onClick={() => setShowModal(false)}>
