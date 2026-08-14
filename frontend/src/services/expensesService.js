@@ -14,19 +14,29 @@ export const expensesService = {
       queries.push(Query.equal('year', parseInt(year)));
     }
 
-    const [expensesRes, resourcesRes] = await Promise.all([
+    const [expensesRes, resourcesRes, budgetsRes] = await Promise.all([
       databases.listDocuments(DATABASE_ID, COLLECTIONS.EXPENSES, queries),
-      databases.listDocuments(DATABASE_ID, COLLECTIONS.RESOURCES, [Query.limit(500)])
+      databases.listDocuments(DATABASE_ID, COLLECTIONS.RESOURCES, [Query.limit(500)]),
+      databases.listDocuments(DATABASE_ID, COLLECTIONS.BUDGETS, [Query.limit(500)])
     ]);
 
     const resourcesMap = {};
     resourcesRes.documents.forEach(r => { resourcesMap[r.$id] = r.name; });
 
-    return expensesRes.documents.map(e => ({
-      id: e.$id,
-      ...e,
-      resource_name: resourcesMap[e.resource_id] || 'Desconhecido'
-    }));
+    const ratesMap = {};
+    budgetsRes.documents.forEach(b => { ratesMap[b.$id] = parseFloat(b.exchange_rate) || 0; });
+
+    return expensesRes.documents.map(e => {
+      const rate = e.budget_id ? (ratesMap[e.budget_id] || 0) : 0;
+      const amountBrl = parseFloat(e.amount || 0);
+      return {
+        id: e.$id,
+        ...e,
+        resource_name: resourcesMap[e.resource_id] || 'Desconhecido',
+        exchange_rate: rate,
+        amount_usd: rate > 0 ? amountBrl / rate : null
+      };
+    });
   },
 
   // Todas as despesas de um ano, de todos os produtos (visão consolidada)
@@ -36,8 +46,24 @@ export const expensesService = {
       Query.limit(2000)
     ];
 
-    const res = await databases.listDocuments(DATABASE_ID, COLLECTIONS.EXPENSES, queries);
-    return res.documents.map(e => ({ id: e.$id, ...e }));
+    const [res, budgetsRes] = await Promise.all([
+      databases.listDocuments(DATABASE_ID, COLLECTIONS.EXPENSES, queries),
+      databases.listDocuments(DATABASE_ID, COLLECTIONS.BUDGETS, [Query.limit(500)])
+    ]);
+
+    const ratesMap = {};
+    budgetsRes.documents.forEach(b => { ratesMap[b.$id] = parseFloat(b.exchange_rate) || 0; });
+
+    return res.documents.map(e => {
+      const rate = e.budget_id ? (ratesMap[e.budget_id] || 0) : 0;
+      const amountBrl = parseFloat(e.amount || 0);
+      return {
+        id: e.$id,
+        ...e,
+        exchange_rate: rate,
+        amount_usd: rate > 0 ? amountBrl / rate : null
+      };
+    });
   },
 
   // Totais mensais para gráfico
@@ -48,14 +74,23 @@ export const expensesService = {
       Query.limit(2000)
     ];
 
-    const res = await databases.listDocuments(DATABASE_ID, COLLECTIONS.EXPENSES, queries);
+    const [res, budgetsRes] = await Promise.all([
+      databases.listDocuments(DATABASE_ID, COLLECTIONS.EXPENSES, queries),
+      databases.listDocuments(DATABASE_ID, COLLECTIONS.BUDGETS, [Query.limit(500)])
+    ]);
+
+    const ratesMap = {};
+    budgetsRes.documents.forEach(b => { ratesMap[b.$id] = parseFloat(b.exchange_rate) || 0; });
 
     const monthly = {};
     res.documents.forEach(e => {
       if (!monthly[e.month]) {
-        monthly[e.month] = { month: e.month, year: e.year, total: 0, count: 0 };
+        monthly[e.month] = { month: e.month, year: e.year, total: 0, totalUsd: 0, count: 0 };
       }
-      monthly[e.month].total += parseFloat(e.amount || 0);
+      const amount = parseFloat(e.amount || 0);
+      monthly[e.month].total += amount;
+      const rate = e.budget_id ? (ratesMap[e.budget_id] || 0) : 0;
+      if (rate > 0) monthly[e.month].totalUsd += amount / rate;
       monthly[e.month].count += 1;
     });
 

@@ -140,6 +140,9 @@ function Resources() {
   const formatCurrency = (value) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+  const formatUsd = (value) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+
   const formatBudgetLabel = (budget) => {
     if (!budget) return '';
     const start = budget.period_start ? new Date(budget.period_start).toLocaleDateString('pt-BR') : '?';
@@ -216,7 +219,7 @@ function Resources() {
                   <th>Alocação</th>
                   <th>Status</th>
                   <th>Budget</th>
-                  <th>Valor Real</th>
+                  <th>Valor Real (R$/US$)</th>
                   <th style={{ width: '220px' }}>Ações</th>
                 </tr>
               </thead>
@@ -266,6 +269,9 @@ function Resources() {
                         </td>
                         <td className="font-semibold">
                           {formatCurrency(parseFloat(resource.actual_value || 0))}
+                          <div className="text-muted" style={{ fontSize: '12px', fontWeight: 400 }}>
+                            {formatUsd(resource.actual_value_usd || 0)}
+                          </div>
                         </td>
                         <td className="actions">
                           <button onClick={() => handleViewDetails(resource)} className="btn-ghost btn-small">
@@ -503,6 +509,7 @@ function Resources() {
                     </label>
                     <div style={{ fontSize: '15px' }}>
                       <strong>Real (Despesas):</strong> {formatCurrency(parseFloat(selectedResource.actual_value || 0))}
+                      {' '}/ {formatUsd(selectedResource.actual_value_usd || 0)}
                     </div>
                   </div>
                 </div>

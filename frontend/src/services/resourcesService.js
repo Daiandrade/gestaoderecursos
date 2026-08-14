@@ -24,6 +24,10 @@ export const resourcesService = {
     return resourcesRes.documents.map(r => {
       const resourceExpenses = expensesRes.documents.filter(e => e.resource_id === r.$id);
       const totalExpenses = resourceExpenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+      const totalExpensesUsd = resourceExpenses.reduce((sum, e) => {
+        const rate = e.budget_id ? parseFloat(budgetsMap[e.budget_id]?.exchange_rate) || 0 : 0;
+        return rate > 0 ? sum + parseFloat(e.amount || 0) / rate : sum;
+      }, 0);
 
       return {
         id: r.$id,
@@ -31,6 +35,7 @@ export const resourcesService = {
         product_name: productsMap[r.product_id] || 'Desconhecido',
         total_expenses: totalExpenses,
         actual_value: totalExpenses, // valor real = soma das despesas
+        actual_value_usd: totalExpensesUsd,
         expense_count: resourceExpenses.length,
         budget: budgetsMap[r.budget_id] || null
       };
