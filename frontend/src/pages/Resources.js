@@ -219,7 +219,7 @@ function Resources() {
                   <th>Alocação</th>
                   <th>Status</th>
                   <th>Budget</th>
-                  <th>Valor Real (R$/US$)</th>
+                  <th>Valor Real (US$/R$)</th>
                   <th style={{ width: '220px' }}>Ações</th>
                 </tr>
               </thead>
@@ -268,9 +268,9 @@ function Resources() {
                           )}
                         </td>
                         <td className="font-semibold">
-                          {formatCurrency(parseFloat(resource.actual_value || 0))}
+                          {formatUsd(resource.actual_value || 0)}
                           <div className="text-muted" style={{ fontSize: '12px', fontWeight: 400 }}>
-                            {formatUsd(resource.actual_value_usd || 0)}
+                            {formatCurrency(parseFloat(resource.actual_value_brl || 0))}
                           </div>
                         </td>
                         <td className="actions">
@@ -508,8 +508,8 @@ function Resources() {
                       Valores
                     </label>
                     <div style={{ fontSize: '15px' }}>
-                      <strong>Real (Despesas):</strong> {formatCurrency(parseFloat(selectedResource.actual_value || 0))}
-                      {' '}/ {formatUsd(selectedResource.actual_value_usd || 0)}
+                      <strong>Real (Despesas):</strong> {formatUsd(selectedResource.actual_value || 0)}
+                      {' '}/ {formatCurrency(parseFloat(selectedResource.actual_value_brl || 0))}
                     </div>
                   </div>
                 </div>

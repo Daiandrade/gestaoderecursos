@@ -28,13 +28,13 @@ export const expensesService = {
 
     return expensesRes.documents.map(e => {
       const rate = e.budget_id ? (ratesMap[e.budget_id] || 0) : 0;
-      const amountBrl = parseFloat(e.amount || 0);
+      const amountUsd = parseFloat(e.amount || 0);
       return {
         id: e.$id,
         ...e,
         resource_name: resourcesMap[e.resource_id] || 'Desconhecido',
         exchange_rate: rate,
-        amount_usd: rate > 0 ? amountBrl / rate : null
+        amount_brl: rate > 0 ? amountUsd * rate : null
       };
     });
   },
@@ -56,12 +56,12 @@ export const expensesService = {
 
     return res.documents.map(e => {
       const rate = e.budget_id ? (ratesMap[e.budget_id] || 0) : 0;
-      const amountBrl = parseFloat(e.amount || 0);
+      const amountUsd = parseFloat(e.amount || 0);
       return {
         id: e.$id,
         ...e,
         exchange_rate: rate,
-        amount_usd: rate > 0 ? amountBrl / rate : null
+        amount_brl: rate > 0 ? amountUsd * rate : null
       };
     });
   },
@@ -85,12 +85,12 @@ export const expensesService = {
     const monthly = {};
     res.documents.forEach(e => {
       if (!monthly[e.month]) {
-        monthly[e.month] = { month: e.month, year: e.year, total: 0, totalUsd: 0, count: 0 };
+        monthly[e.month] = { month: e.month, year: e.year, total: 0, totalBrl: 0, count: 0 };
       }
-      const amount = parseFloat(e.amount || 0);
-      monthly[e.month].total += amount;
+      const amountUsd = parseFloat(e.amount || 0);
+      monthly[e.month].total += amountUsd;
       const rate = e.budget_id ? (ratesMap[e.budget_id] || 0) : 0;
-      if (rate > 0) monthly[e.month].totalUsd += amount / rate;
+      if (rate > 0) monthly[e.month].totalBrl += amountUsd * rate;
       monthly[e.month].count += 1;
     });
 

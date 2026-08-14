@@ -113,7 +113,7 @@ function Expenses() {
         return {
           month: month.substring(0, 3),
           valor: md ? parseFloat(md.total) : 0,
-          valorUsd: md ? parseFloat(md.totalUsd) : 0
+          valorBrl: md ? parseFloat(md.totalBrl) : 0
         };
       });
       setMonthlyData(result);
@@ -209,11 +209,11 @@ function Expenses() {
 
   const filteredResources = resources.filter(r => r.product_id === selectedProduct);
   const totalYear = monthlyData.reduce((sum, m) => sum + m.valor, 0);
-  const totalYearUsd = monthlyData.reduce((sum, m) => sum + (m.valorUsd || 0), 0);
+  const totalYearBrl = monthlyData.reduce((sum, m) => sum + (m.valorBrl || 0), 0);
   const monthsWithData = monthlyData.filter(m => m.valor > 0).length;
   const avgMonthly = monthsWithData > 0 ? totalYear / monthsWithData : 0;
-  const avgMonthlyUsd = monthsWithData > 0 ? totalYearUsd / monthsWithData : 0;
-  const maxMonth = monthlyData.reduce((max, m) => m.valor > max.valor ? m : max, { month: '-', valor: 0, valorUsd: 0 });
+  const avgMonthlyBrl = monthsWithData > 0 ? totalYearBrl / monthsWithData : 0;
+  const maxMonth = monthlyData.reduce((max, m) => m.valor > max.valor ? m : max, { month: '-', valor: 0, valorBrl: 0 });
 
   // Matriz consolidada: produto x mês, com totais por linha, por coluna e geral
   const consolidatedMatrix = products.map(product => {
@@ -224,13 +224,13 @@ function Expenses() {
         .filter(e => e.month === monthNumber)
         .reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
     });
-    const totalUsd = productExpenses.reduce((sum, e) => sum + (e.amount_usd || 0), 0);
+    const totalBrl = productExpenses.reduce((sum, e) => sum + (e.amount_brl || 0), 0);
     return {
       productId: product.id,
       productName: product.name,
       monthTotals,
       total: monthTotals.reduce((sum, v) => sum + v, 0),
-      totalUsd
+      totalBrl
     };
   });
 
@@ -238,13 +238,13 @@ function Expenses() {
     consolidatedMatrix.reduce((sum, row) => sum + row.monthTotals[index], 0)
   );
   const consolidatedGrandTotal = consolidatedMonthTotals.reduce((sum, v) => sum + v, 0);
-  const consolidatedGrandTotalUsd = consolidatedMatrix.reduce((sum, row) => sum + row.totalUsd, 0);
+  const consolidatedGrandTotalBrl = consolidatedMatrix.reduce((sum, row) => sum + row.totalBrl, 0);
   const consolidatedMonthsWithData = consolidatedMonthTotals.filter(v => v > 0).length;
   const consolidatedAvgMonthly = consolidatedMonthsWithData > 0
     ? consolidatedGrandTotal / consolidatedMonthsWithData
     : 0;
-  const consolidatedAvgMonthlyUsd = consolidatedMonthsWithData > 0
-    ? consolidatedGrandTotalUsd / consolidatedMonthsWithData
+  const consolidatedAvgMonthlyBrl = consolidatedMonthsWithData > 0
+    ? consolidatedGrandTotalBrl / consolidatedMonthsWithData
     : 0;
   const consolidatedChartData = months.map((month, index) => ({
     month: month.substring(0, 3),
@@ -261,20 +261,20 @@ function Expenses() {
     sections: [
       {
         heading: 'Lançamentos',
-        columns: ['Recurso', 'Período', 'Valor (R$)', 'Valor (US$)', 'Descrição', 'Registrado por'],
+        columns: ['Recurso', 'Período', 'Valor (US$)', 'Valor (R$)', 'Descrição', 'Registrado por'],
         rows: expenses.map(e => [
           e.resource_name,
           `${months[e.month - 1]}/${e.year}`,
-          formatCurrency(parseFloat(e.amount)),
-          e.amount_usd != null ? formatUsd(e.amount_usd) : '-',
+          formatUsd(parseFloat(e.amount)),
+          e.amount_brl != null ? formatCurrency(e.amount_brl) : '-',
           e.description || '-',
           e.created_by_name || '-'
         ])
       },
       {
         heading: 'Resumo Mensal',
-        columns: ['Mês', 'Valor (R$)', 'Valor (US$)'],
-        rows: monthlyData.map(m => [m.month, formatCurrency(m.valor), formatUsd(m.valorUsd || 0)])
+        columns: ['Mês', 'Valor (US$)', 'Valor (R$)'],
+        rows: monthlyData.map(m => [m.month, formatUsd(m.valor), formatCurrency(m.valorBrl || 0)])
       }
     ]
   });
@@ -285,19 +285,19 @@ function Expenses() {
     sections: [
       {
         heading: 'Consolidado por Produto e Mês',
-        columns: ['Produto', ...months.map(m => m.substring(0, 3)), 'Total (R$)', 'Total (US$)'],
+        columns: ['Produto', ...months.map(m => m.substring(0, 3)), 'Total (US$)', 'Total (R$)'],
         rows: [
           ...consolidatedMatrix.map(row => [
             row.productName,
-            ...row.monthTotals.map(v => formatCurrency(v)),
-            formatCurrency(row.total),
-            formatUsd(row.totalUsd)
+            ...row.monthTotals.map(v => formatUsd(v)),
+            formatUsd(row.total),
+            formatCurrency(row.totalBrl)
           ]),
           [
             'Total Geral',
-            ...consolidatedMonthTotals.map(v => formatCurrency(v)),
-            formatCurrency(consolidatedGrandTotal),
-            formatUsd(consolidatedGrandTotalUsd)
+            ...consolidatedMonthTotals.map(v => formatUsd(v)),
+            formatUsd(consolidatedGrandTotal),
+            formatCurrency(consolidatedGrandTotalBrl)
           ]
         ]
       }
@@ -390,8 +390,8 @@ function Expenses() {
             <div className="stat-card-header">
               <div>
                 <div className="stat-label">Total {selectedYear}</div>
-                <div className="stat-value">{formatCurrency(consolidatedGrandTotal)}</div>
-                <div className="stat-change">{formatUsd(consolidatedGrandTotalUsd)} · Todos os produtos</div>
+                <div className="stat-value">{formatUsd(consolidatedGrandTotal)}</div>
+                <div className="stat-change">{formatCurrency(consolidatedGrandTotalBrl)} · Todos os produtos</div>
               </div>
               <div className="stat-icon">💰</div>
             </div>
@@ -401,8 +401,8 @@ function Expenses() {
             <div className="stat-card-header">
               <div>
                 <div className="stat-label">Média Mensal</div>
-                <div className="stat-value">{formatCurrency(consolidatedAvgMonthly)}</div>
-                <div className="stat-change">{formatUsd(consolidatedAvgMonthlyUsd)} · Por mês</div>
+                <div className="stat-value">{formatUsd(consolidatedAvgMonthly)}</div>
+                <div className="stat-change">{formatCurrency(consolidatedAvgMonthlyBrl)} · Por mês</div>
               </div>
               <div className="stat-icon info">📊</div>
             </div>
@@ -423,7 +423,7 @@ function Expenses() {
         <div className="card">
           <div className="card-header">
             <span>Evolução de Despesas - Consolidado ({selectedYear})</span>
-            <span className="card-subtitle">Valores em R$ · Todos os produtos</span>
+            <span className="card-subtitle">Valores em US$ · Todos os produtos</span>
           </div>
           <ResponsiveContainer width="100%" height={320}>
             <AreaChart data={consolidatedChartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -436,7 +436,7 @@ function Expenses() {
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6E6E6E' }} />
               <YAxis tick={{ fontSize: 12, fill: '#6E6E6E' }} />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
+              <Tooltip formatter={(value) => formatUsd(value)} />
               <Area type="monotone" dataKey="valor" stroke="#0052CC" strokeWidth={3} fillOpacity={1} fill="url(#colorConsolidado)" name="Despesas" />
             </AreaChart>
           </ResponsiveContainer>
@@ -472,13 +472,13 @@ function Expenses() {
                         <td><strong>{row.productName}</strong></td>
                         {row.monthTotals.map((value, index) => (
                           <td key={index} style={{ textAlign: 'right' }} className={value > 0 ? 'font-semibold' : 'text-muted'}>
-                            {value > 0 ? formatCurrency(value) : '-'}
+                            {value > 0 ? formatUsd(value) : '-'}
                           </td>
                         ))}
                         <td style={{ textAlign: 'right' }} className="font-semibold text-primary">
-                          {formatCurrency(row.total)}
+                          {formatUsd(row.total)}
                           <div className="text-muted" style={{ fontSize: '12px', fontWeight: 400 }}>
-                            {formatUsd(row.totalUsd)}
+                            {formatCurrency(row.totalBrl)}
                           </div>
                         </td>
                       </tr>
@@ -487,13 +487,13 @@ function Expenses() {
                       <td><strong>Total Geral</strong></td>
                       {consolidatedMonthTotals.map((value, index) => (
                         <td key={index} style={{ textAlign: 'right' }} className="font-semibold">
-                          {formatCurrency(value)}
+                          {formatUsd(value)}
                         </td>
                       ))}
                       <td style={{ textAlign: 'right' }} className="font-semibold text-primary">
-                        {formatCurrency(consolidatedGrandTotal)}
+                        {formatUsd(consolidatedGrandTotal)}
                         <div className="text-muted" style={{ fontSize: '12px', fontWeight: 400 }}>
-                          {formatUsd(consolidatedGrandTotalUsd)}
+                          {formatCurrency(consolidatedGrandTotalBrl)}
                         </div>
                       </td>
                     </tr>
@@ -511,8 +511,8 @@ function Expenses() {
             <div className="stat-card-header">
               <div>
                 <div className="stat-label">Total {selectedYear}</div>
-                <div className="stat-value">{formatCurrency(totalYear)}</div>
-                <div className="stat-change">{formatUsd(totalYearUsd)} · {currentProductName}</div>
+                <div className="stat-value">{formatUsd(totalYear)}</div>
+                <div className="stat-change">{formatCurrency(totalYearBrl)} · {currentProductName}</div>
               </div>
               <div className="stat-icon">💰</div>
             </div>
@@ -522,8 +522,8 @@ function Expenses() {
             <div className="stat-card-header">
               <div>
                 <div className="stat-label">Média Mensal</div>
-                <div className="stat-value">{formatCurrency(avgMonthly)}</div>
-                <div className="stat-change">{formatUsd(avgMonthlyUsd)} · Por mês</div>
+                <div className="stat-value">{formatUsd(avgMonthly)}</div>
+                <div className="stat-change">{formatCurrency(avgMonthlyBrl)} · Por mês</div>
               </div>
               <div className="stat-icon info">📊</div>
             </div>
@@ -533,8 +533,8 @@ function Expenses() {
             <div className="stat-card-header">
               <div>
                 <div className="stat-label">Pico Mensal</div>
-                <div className="stat-value">{formatCurrency(maxMonth.valor)}</div>
-                <div className="stat-change">{formatUsd(maxMonth.valorUsd || 0)} · {maxMonth.month}/{selectedYear}</div>
+                <div className="stat-value">{formatUsd(maxMonth.valor)}</div>
+                <div className="stat-change">{formatCurrency(maxMonth.valorBrl || 0)} · {maxMonth.month}/{selectedYear}</div>
               </div>
               <div className="stat-icon warning">📈</div>
             </div>
@@ -555,7 +555,7 @@ function Expenses() {
         <div className="card">
           <div className="card-header">
             <span>Evolução de Despesas - {currentProductName} ({selectedYear})</span>
-            <span className="card-subtitle">Valores em R$</span>
+            <span className="card-subtitle">Valores em US$</span>
           </div>
           <ResponsiveContainer width="100%" height={320}>
             <AreaChart data={monthlyData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
@@ -568,7 +568,7 @@ function Expenses() {
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E5" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6E6E6E' }} />
               <YAxis tick={{ fontSize: 12, fill: '#6E6E6E' }} />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
+              <Tooltip formatter={(value) => formatUsd(value)} />
               <Area type="monotone" dataKey="valor" stroke="#D64000" strokeWidth={3} fillOpacity={1} fill="url(#colorValor)" name="Despesas" />
             </AreaChart>
           </ResponsiveContainer>
@@ -585,7 +585,7 @@ function Expenses() {
                 <tr>
                   <th>Recurso</th>
                   <th>Período</th>
-                  <th>Valor (R$/US$)</th>
+                  <th>Valor (US$/R$)</th>
                   <th>Descrição</th>
                   <th>Registrado por</th>
                   <th style={{ width: '240px' }}>Ações</th>
@@ -604,9 +604,9 @@ function Expenses() {
                       <td><strong>{expense.resource_name}</strong></td>
                       <td><span className="badge badge-info">{months[expense.month - 1]}/{expense.year}</span></td>
                       <td className="font-semibold text-primary">
-                        {formatCurrency(parseFloat(expense.amount))}
+                        {formatUsd(parseFloat(expense.amount))}
                         <div className="text-muted" style={{ fontSize: '12px', fontWeight: 400 }}>
-                          {expense.amount_usd != null ? formatUsd(expense.amount_usd) : '—'}
+                          {expense.amount_brl != null ? formatCurrency(expense.amount_brl) : '—'}
                         </div>
                       </td>
                       <td className="text-muted">{expense.description || '-'}</td>
@@ -679,7 +679,7 @@ function Expenses() {
                   </div>
 
                   <div>
-                    <label>Valor (R$) *</label>
+                    <label>Valor (US$) *</label>
                     <NumericFormat
                       thousandSeparator="."
                       decimalSeparator=","
